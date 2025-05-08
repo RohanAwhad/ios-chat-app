@@ -23,28 +23,38 @@ export default function ChatScreen() {
   const theme = useColorScheme() ?? 'light';
 
   const handleSend = async () => {
+    console.log(inputText);
     if (!inputText.trim()) return;
 
-    // Add user message
-    const userMessage: Message = {
-      role: 'user',
-      content: inputText,
-      id: Date.now().toString(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    // Capture current input and then clear it for better UX.
+    const currentInputText = inputText;
     setInputText('');
     Keyboard.dismiss();
 
-    // Create assistant message
-    const assistantMessageId = Date.now().toString() + '-assistant';
-    const assistantMessage: Message = {
+    const timestamp = Date.now().toString();
+    const userMessage: Message = {
+      role: 'user',
+      content: currentInputText,
+      id: timestamp,
+    };
+
+    const assistantMessageId = timestamp + '-assistant';
+    const assistantMessagePlaceholder: Message = {
       role: 'assistant',
-      content: '',
+      content: '', // Placeholder, will be filled by stream
       id: assistantMessageId,
     };
 
-    setMessages(prev => [...prev, assistantMessage]);
+    // Prepare messages for the API: current history + new user message.
+    // `messages` state here is the history *before* this send action.
+    const messagesForApi = [...messages, userMessage].map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    // Update UI optimistically with user message and assistant placeholder.
+    // Functional update ensures we use the latest `prevMessages` state.
+    setMessages(prevMessages => [...prevMessages, userMessage, assistantMessagePlaceholder]);
 
     let accumulatedContent = '';
 
@@ -52,11 +62,10 @@ export default function ChatScreen() {
       const apiKey = await AsyncStorage.getItem('openai-api-key');
       if (!apiKey) {
         Alert.alert('Error', 'Please set your API key in settings first');
-        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId)); // Remove placeholder
+        // Remove the placeholder assistant message if API key is missing
+        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
         return;
       }
-
-      const currentChatMessages = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -65,10 +74,10 @@ export default function ChatScreen() {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4', // Consider making this configurable or using a newer model like gpt-4o-mini
+          model: 'gpt-4o-mini', // Or 'gpt-4o-mini' or make configurable
           messages: [
             { role: 'system', content: 'You are a helpful assistant.' },
-            ...currentChatMessages
+            ...messagesForApi, // Use the correctly prepared list
           ],
           stream: true,
         }),
@@ -80,74 +89,63 @@ export default function ChatScreen() {
         if (errorData && errorData.error && errorData.error.message) {
           errorMessage = errorData.error.message;
         }
-        
+
         if (response.status === 401) {
           Alert.alert('Error', 'Invalid API key - please check your settings.');
         } else {
           Alert.alert('Error', errorMessage);
         }
-        throw new Error(errorMessage);
+        // Update the specific assistant message placeholder with the error and return.
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === assistantMessageId ? { ...msg, content: errorMessage } : msg
+          )
+        );
+        return;
       }
 
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      // In React Native, we need to use the text() method instead of body.getReader()
+      const responseText = await response.text();
+      
+      // Process the full response as a series of SSE events
+      const lines = responseText.split('\n');
       let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        
-        // Keep the last partial line in the buffer
-        buffer = lines.pop() || ''; 
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.substring(6).trim();
-            if (data === '[DONE]') {
-              // Optional: Handle stream completion if needed, though loop break handles it
-              break; 
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6).trim();
+          if (data === '[DONE]') {
+            break; // Stream explicitly marked as done by OpenAI
+          }
+          
+          try {
+            const parsed = JSON.parse(data);
+            const deltaContent = parsed.choices[0]?.delta?.content;
+            if (deltaContent) {
+              accumulatedContent += deltaContent;
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: accumulatedContent }
+                    : msg
+                )
+              );
+              scrollViewRef.current?.scrollToEnd({ animated: true });
             }
-            try {
-              const parsed = JSON.parse(data);
-              const deltaContent = parsed.choices[0]?.delta?.content;
-              if (deltaContent) {
-                accumulatedContent += deltaContent;
-                setMessages(prev =>
-                  prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: accumulatedContent }
-                      : msg
-                  )
-                );
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-              }
-            } catch (e) {
-              console.error('Error parsing stream data:', e, 'Data:', data);
-            }
+          } catch (e) {
+            console.error('Error parsing stream data:', e, 'Data:', data);
           }
         }
-         // Check if [DONE] was in the processed lines and break outer loop
-        if (lines.some(line => line.substring(6).trim() === '[DONE]')) {
-          break;
-        }
       }
-    } catch (error: any) {
+    } catch (error: any) { // Catches network errors, AsyncStorage errors, etc.
       console.error('API call failed:', error);
+      const errorMessage = `Error: ${error.message || 'Failed to get response'}`;
       setMessages(prev =>
         prev.map(msg =>
           msg.id === assistantMessageId
-            ? { ...msg, content: `Error: ${error.message || 'Failed to get response'}` }
+            ? { ...msg, content: accumulatedContent ? `${accumulatedContent}\n${errorMessage}` : errorMessage }
             : msg
-        ).filter(msg => !(msg.id === assistantMessageId && accumulatedContent === '' && error)) // Clean up empty error assistant message
+        )
       );
     }
   };
@@ -170,18 +168,18 @@ export default function ChatScreen() {
             key={message.id}
             style={[
               styles.messageBubble,
-              message.role === 'user' 
-                ? { ...styles.userBubble, backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint } 
+              message.role === 'user'
+                ? { ...styles.userBubble, backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
                 : { ...styles.assistantBubble, backgroundColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon },
-              message.role === 'user' 
-                ? { alignSelf: 'flex-end' } 
+              message.role === 'user'
+                ? { alignSelf: 'flex-end' }
                 : { alignSelf: 'flex-start' }
             ]}
           >
-            <ThemedText 
+            <ThemedText
               style={[
-                styles.messageText, 
-                message.role === 'user' 
+                styles.messageText,
+                message.role === 'user'
                   ? { color: theme === 'light' ? Colors.dark.text : Colors.light.text } // User text color based on bubble
                   : { color: theme === 'light' ? Colors.dark.text : Colors.light.text }  // Assistant text color (can be different)
               ]}
@@ -192,9 +190,9 @@ export default function ChatScreen() {
         ))}
       </ScrollView>
 
-      <ThemedView 
+      <ThemedView
         style={[
-          styles.inputContainer, 
+          styles.inputContainer,
           { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
         ]}
       >
