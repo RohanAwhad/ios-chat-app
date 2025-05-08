@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Colors } from '@/constants/Colors';
@@ -17,7 +19,15 @@ type Message = {
 
 
 export default function ChatScreen() {
+  const params = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
+  
+  useEffect(() => {
+    if (params.newChat === 'true') {
+      setMessages([]);
+      router.setParams({ newChat: undefined });
+    }
+  }, [params.newChat]);
   const [inputText, setInputText] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useColorScheme() ?? 'light';
