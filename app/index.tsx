@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { Stack, router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import axios from 'axios';
 
@@ -14,6 +15,8 @@ type Message = {
   content: string;
   id: string;
 };
+
+
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -117,7 +120,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.select({ ios: 0, android: 500 })}
+      keyboardVerticalOffset={Platform.select({ ios: 0, android: 80 })}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -177,6 +180,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   messagesContainer: {
+    flexGrow: 1,
     paddingVertical: 16,
     gap: 12,
   },
