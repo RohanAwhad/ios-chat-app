@@ -120,12 +120,12 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.select({ ios: 0, android: 80 })}
+      keyboardVerticalOffset={Platform.select({ ios: 0, android: 100 })}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         ref={scrollViewRef}
-        contentContainerStyle={styles.messagesContainer}
+        contentContainerStyle={[styles.messagesContainer, { paddingBottom: 20 }]}
         keyboardDismissMode="interactive"
       >
         {messages.map((message) => (
