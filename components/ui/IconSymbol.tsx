@@ -38,5 +38,9 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />
+    </TouchableOpacity>
+  );
 }

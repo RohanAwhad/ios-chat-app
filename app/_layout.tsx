@@ -14,7 +14,7 @@ export default function Layout() {
               name="gearshape.fill"
               size={24}
               color={Colors.light.tint}
-              onPress={() => router.push('/settings')}
+              onPress={() => router.navigate('/settings')}
             />
           ),
         }}
