@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity } from 'react-native';
+import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import axios from 'axios';
 
@@ -18,8 +18,8 @@ type Message = {
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const scrollViewRef = useRef<ScrollView
-        keyboardShouldPersistTaps="handled">(null);
+  const scrollViewRef = useRef < ScrollView
+  keyboardShouldPersistTaps = "handled" > (null);
   const theme = useColorScheme() ?? 'light';
 
   const handleSend = async () => {
@@ -72,22 +72,22 @@ export default function ChatScreen() {
 
       let content = '';
       const stream = response.data;
-      
+
       stream.on('data', (chunk) => {
         const lines = chunk.toString().split('\n');
         lines.forEach(line => {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') return;
-            
+
             try {
               const parsed = JSON.parse(data);
               const delta = parsed.choices[0].delta?.content || '';
               content += delta;
-              
-              setMessages(prev => prev.map(msg => 
-                msg.id === assistantMessageId 
-                  ? { ...msg, content } 
+
+              setMessages(prev => prev.map(msg =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content }
                   : msg
               ));
 
@@ -105,9 +105,9 @@ export default function ChatScreen() {
 
     } catch (error) {
       console.error('API call failed:', error);
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessageId 
-          ? { ...msg, content: 'Error: Failed to get response' } 
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? { ...msg, content: 'Error: Failed to get response' }
           : msg
       ));
     }
@@ -136,7 +136,7 @@ export default function ChatScreen() {
             <ThemedText style={styles.messageText}>
               {message.content}
             </ThemedText>
-          </KeyboardAvoidingView>
+          </ThemedView>
         ))}
       </ScrollView>
 
@@ -167,7 +167,7 @@ export default function ChatScreen() {
           />
         </TouchableOpacity>
       </ThemedView>
-    </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 
