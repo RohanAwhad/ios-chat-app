@@ -37,3 +37,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+.dingllm
+.hackhub.log
+llm.md
