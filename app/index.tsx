@@ -50,38 +50,44 @@ export default function ChatScreen() {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
+      const apiKey = await AsyncStorage.getItem('openai-api-key');
+      if (!apiKey) {
+        throw new Error('API key not found');
+      }
+
+      const updatedMessages = [...messages, userMessage];
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
           model: 'gpt-4',
           messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant.'
-            },
-            ...messages.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: inputText }
+            { role: 'system', content: 'You are a helpful assistant.' },
+            ...updatedMessages.map(m => ({ role: m.role, content: m.content }))
           ],
           stream: true,
         },
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await AsyncStorage.getItem('openai-api-key')}`,
+            Authorization: `Bearer ${apiKey}`,
           },
           responseType: 'stream',
         }
       );
 
-      let content = '';
       const stream = response.data;
+      const decoder = new TextDecoder();
+      let content = '';
+      let buffer = '';
 
       stream.on('data', (chunk) => {
-        const lines = chunk.toString().split('\n');
-        lines.forEach(line => {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split('\n');
+
+        for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') return;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
 
             try {
               const parsed = JSON.parse(data);
@@ -99,15 +105,25 @@ export default function ChatScreen() {
               console.error('Error parsing chunk:', e);
             }
           }
-        });
+        }
+
+        buffer = lines[lines.length - 1];
       });
 
-      stream.on('end', () => {
-        // Finalize message if needed
+      await new Promise((resolve, reject) => {
+        stream.on('end', resolve);
+        stream.on('error', reject);
       });
 
     } catch (error) {
       console.error('API call failed:', error);
+      if (error.message.includes('401')) {
+        Alert.alert('Error', 'Invalid API key - please check your settings');
+      } else if (error.message.includes('API key not found')) {
+        Alert.alert('Error', 'Please set your API key in settings first');
+      } else {
+        Alert.alert('Error', 'Failed to connect to OpenAI API');
+      }
       setMessages(prev => prev.map(msg =>
         msg.id === assistantMessageId
           ? { ...msg, content: 'Error: Failed to get response' }
