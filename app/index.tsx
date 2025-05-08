@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import axios from 'axios';
@@ -17,7 +18,8 @@ type Message = {
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView
+        keyboardShouldPersistTaps="handled">(null);
   const theme = useColorScheme() ?? 'light';
 
   const handleSend = async () => {
@@ -62,7 +64,7 @@ export default function ChatScreen() {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer YOUR_API_KEY', // TODO: Replace with stored key
+            'Authorization': `Bearer ${await AsyncStorage.getItem('openai-api-key')}`,
           },
           responseType: 'stream',
         }
@@ -112,8 +114,13 @@ export default function ChatScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.select({ ios: 0, android: 500 })}
+    >
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         ref={scrollViewRef}
         contentContainerStyle={styles.messagesContainer}
         keyboardDismissMode="interactive"
@@ -129,7 +136,7 @@ export default function ChatScreen() {
             <ThemedText style={styles.messageText}>
               {message.content}
             </ThemedText>
-          </ThemedView>
+          </KeyboardAvoidingView>
         ))}
       </ScrollView>
 
