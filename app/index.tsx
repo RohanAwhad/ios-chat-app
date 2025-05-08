@@ -160,11 +160,12 @@ export default function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.select({ ios: 90, android: 100 })} // Adjusted for iOS header
-    >
+    <ThemedView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.select({ ios: 90, android: 100 })}
+        style={styles.keyboardAvoid}
+      >
       <ScrollView
         keyboardShouldPersistTaps="always"
         ref={scrollViewRef}
@@ -230,12 +231,16 @@ export default function ChatScreen() {
           />
         </TouchableOpacity>
       </ThemedView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboardAvoid: {
     flex: 1,
   },
   messagesContainer: {
