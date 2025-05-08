@@ -67,76 +67,76 @@ export default function ChatScreen() {
         return;
       }
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini', // Or 'gpt-4o-mini' or make configurable
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            ...messagesForApi, // Use the correctly prepared list
-          ],
-          stream: true,
-        }),
-      });
+      // Use XHR instead of fetch to properly handle streaming in React Native
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://api.openai.com/v1/chat/completions');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
-        let errorMessage = `API Error: ${response.status}`;
-        if (errorData && errorData.error && errorData.error.message) {
-          errorMessage = errorData.error.message;
-        }
+      let buffer = '';
+      xhr.onprogress = (event) => {
+        if (xhr.readyState === 3) { // LOADING state - receiving data
+          const chunk = xhr.responseText.substring(buffer.length);
+          buffer += chunk;
 
-        if (response.status === 401) {
-          Alert.alert('Error', 'Invalid API key - please check your settings.');
-        } else {
-          Alert.alert('Error', errorMessage);
+          const lines = chunk.split('\n\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.substring(6).trim();
+              if (data === '[DONE]') break;
+
+              try {
+                const parsed = JSON.parse(data);
+                const deltaContent = parsed.choices[0]?.delta?.content;
+                if (deltaContent) {
+                  accumulatedContent += deltaContent;
+                  setMessages(prev =>
+                    prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: accumulatedContent }
+                        : msg
+                    )
+                  );
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }
+              } catch (e) {
+                console.error('Error parsing stream data:', e, 'Data:', data);
+              }
+            }
+          }
         }
-        // Update the specific assistant message placeholder with the error and return.
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 400) {
+          const errorData = JSON.parse(xhr.responseText);
+          const errorMessage = errorData.error?.message || `API Error: ${xhr.status}`;
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMessageId ? { ...msg, content: errorMessage } : msg
+            )
+          );
+        }
+      };
+
+      xhr.onerror = () => {
         setMessages(prev =>
           prev.map(msg =>
-            msg.id === assistantMessageId ? { ...msg, content: errorMessage } : msg
+            msg.id === assistantMessageId
+              ? { ...msg, content: 'Network error - failed to connect to API' }
+              : msg
           )
         );
-        return;
-      }
+      };
 
-      // In React Native, we need to use the text() method instead of body.getReader()
-      const responseText = await response.text();
-      
-      // Process the full response as a series of SSE events
-      const lines = responseText.split('\n');
-      let buffer = '';
-      
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.substring(6).trim();
-          if (data === '[DONE]') {
-            break; // Stream explicitly marked as done by OpenAI
-          }
-          
-          try {
-            const parsed = JSON.parse(data);
-            const deltaContent = parsed.choices[0]?.delta?.content;
-            if (deltaContent) {
-              accumulatedContent += deltaContent;
-              setMessages(prev =>
-                prev.map(msg =>
-                  msg.id === assistantMessageId
-                    ? { ...msg, content: accumulatedContent }
-                    : msg
-                )
-              );
-              scrollViewRef.current?.scrollToEnd({ animated: true });
-            }
-          } catch (e) {
-            console.error('Error parsing stream data:', e, 'Data:', data);
-          }
-        }
-      }
+      xhr.send(JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          ...messagesForApi,
+        ],
+        stream: true,
+      }));
     } catch (error: any) { // Catches network errors, AsyncStorage errors, etc.
       console.error('API call failed:', error);
       const errorMessage = `Error: ${error.message || 'Failed to get response'}`;
