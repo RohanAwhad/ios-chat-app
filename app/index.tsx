@@ -97,7 +97,6 @@ export default function ChatScreen() {
                         : msg
                     )
                   );
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
                 }
               } catch (e) {
                 console.error('Error parsing stream data:', e, 'Data:', data);
@@ -160,7 +159,6 @@ export default function ChatScreen() {
         keyboardShouldPersistTaps="always"
         ref={scrollViewRef}
         contentContainerStyle={styles.messagesContainer}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         keyboardDismissMode="interactive"
       >
         {messages.map((message) => (
