@@ -31,12 +31,14 @@ export function IconSymbol({
   size = 24,
   color,
   style,
+  onPress,
 }: {
   name: IconSymbolName;
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
+  onPress?: () => void;
 }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
