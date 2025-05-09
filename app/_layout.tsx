@@ -7,7 +7,34 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MODELS } from '@/constants/Models';
 
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 100,
+    zIndex: 1,
+  },
+  dropdown: {
+    width: '60%',
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 8,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  checkIcon: {
+    marginLeft: 8,
+  },
+});
+
 export default function Layout() {
+
   const colorScheme = useColorScheme() ?? 'light';
   const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O');
   const [showModels, setShowModels] = useState(false);
@@ -30,15 +57,27 @@ export default function Layout() {
 
   
   return (
-    <Stack>
+    <>
+      <Stack>
+
       <Stack.Screen
         name="index"
         options={{
-          title: 'Chat',
+          headerTitle: () => (
+            <TouchableOpacity onPress={() => setShowModels(!showModels)}>
+              <ThemedText 
+                type="defaultSemiBold"
+                lightColor={Colors.light.text}
+                darkColor={Colors.dark.text}
+              >
+                {MODELS[selectedModel].name}
+              </ThemedText>
+            </TouchableOpacity>
+          ),
           headerStyle: {
             backgroundColor: Colors[colorScheme].background,
           },
-          headerTintColor: Colors[colorScheme].text,
+
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 16 }}>
               <IconSymbol
@@ -71,6 +110,47 @@ export default function Layout() {
           headerTintColor: Colors[colorScheme].text,
         }}
       />
-    </Stack>
+      </Stack>
+
+      {showModels && (
+        <TouchableOpacity 
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setShowModels(false)}
+        >
+          <ThemedView style={[
+            styles.dropdown,
+            {
+              borderColor: Colors[colorScheme].icon,
+            }
+          ]}>
+            {Object.keys(MODELS).map((modelKey) => (
+              <TouchableOpacity
+                key={modelKey}
+                onPress={() => handleModelSelect(modelKey as keyof typeof MODELS)}
+                style={styles.dropdownItem}
+              >
+                <ThemedText 
+                  type="defaultSemiBold"
+                  lightColor={Colors.light.text}
+                  darkColor={Colors.dark.text}
+                >
+                  {MODELS[modelKey as keyof typeof MODELS].name}
+                </ThemedText>
+                {modelKey === selectedModel && (
+                  <IconSymbol
+                    name="checkmark"
+                    size={16}
+                    color={Colors[colorScheme].tint}
+                    style={styles.checkIcon}
+                  />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
+        </TouchableOpacity>
+      )}
+    </>
+
   );
 }

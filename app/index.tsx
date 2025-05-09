@@ -33,11 +33,21 @@ export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useColorScheme() ?? 'light';
 
+  const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O_MINI');
+
+  useEffect(() => {
+    const loadModel = async () => {
+      const savedModel = await AsyncStorage.getItem('selected-model');
+      if (savedModel && Object.keys(MODELS).includes(savedModel)) {
+        setSelectedModel(savedModel as keyof typeof MODELS);
+      }
+    };
+    loadModel();
+  }, []);
+
   const handleSend = async () => {
-    console.log(inputText);
     if (!inputText.trim()) return;
 
-    // Capture current input and then clear it for better UX.
     const currentInputText = inputText;
     setInputText('');
     Keyboard.dismiss();
@@ -48,6 +58,14 @@ export default function ChatScreen() {
       content: currentInputText,
       id: timestamp,
     };
+
+    const modelConfig = MODELS[selectedModel];
+    const apiKey = await AsyncStorage.getItem(modelConfig.apiKeyName);
+    if (!apiKey) {
+      Alert.alert('Error', `Please configure the ${modelConfig.apiKeyName} in settings`);
+      return;
+    }
+
 
     const assistantMessageId = timestamp + '-assistant';
     const assistantMessagePlaceholder: Message = {
@@ -74,8 +92,10 @@ export default function ChatScreen() {
       
       await createChatCompletion({
         messages: messagesForApi,
-        model: MODELS[selectedModel].name,
-        baseURL: MODELS[selectedModel].baseURL,
+        model: modelConfig.name,
+        baseURL: modelConfig.baseURL,
+        apiKey: apiKey,
+
 
         onData: (deltaContent) => {
           accumulatedContent += deltaContent;
