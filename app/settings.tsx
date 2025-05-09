@@ -67,7 +67,7 @@ export default function SettingsScreen() {
         ]}
         onPress={handleSave}
       >
-        <ThemedText style={styles.buttonText}>Save API Key</ThemedText>
+        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save API Key</ThemedText>
         <IconSymbol
           name="paperplane.fill"
           size={20}
