@@ -1,6 +1,9 @@
 import { Stack, router } from 'expo-router';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+
 import { Colors } from '@/constants/Colors';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useState, useEffect } from 'react';
@@ -36,7 +39,7 @@ const styles = StyleSheet.create({
 export default function Layout() {
 
   const colorScheme = useColorScheme() ?? 'light';
-  const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O');
+  const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O_MINI');
   const [showModels, setShowModels] = useState(false);
 
   useEffect(() => {
@@ -55,65 +58,65 @@ export default function Layout() {
     await AsyncStorage.setItem('selected-model', modelKey);
   };
 
-  
+
   return (
     <>
       <Stack>
 
-      <Stack.Screen
-        name="index"
-        options={{
-          headerTitle: () => (
-            <TouchableOpacity onPress={() => setShowModels(!showModels)}>
-              <ThemedText 
-                type="defaultSemiBold"
-                lightColor={Colors.light.text}
-                darkColor={Colors.dark.text}
-              >
-                {MODELS[selectedModel].name}
-              </ThemedText>
-            </TouchableOpacity>
-          ),
-          headerStyle: {
-            backgroundColor: Colors[colorScheme].background,
-          },
+        <Stack.Screen
+          name="index"
+          options={{
+            headerTitle: () => (
+              <TouchableOpacity onPress={() => setShowModels(!showModels)}>
+                <ThemedText
+                  type="defaultSemiBold"
+                  lightColor={Colors.light.text}
+                  darkColor={Colors.dark.text}
+                >
+                  {MODELS[selectedModel].name}
+                </ThemedText>
+              </TouchableOpacity>
+            ),
+            headerStyle: {
+              backgroundColor: Colors[colorScheme].background,
+            },
 
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 16 }}>
-              <IconSymbol
-                name="plus"
-                size={24}
-                color={Colors[colorScheme].tint}
-                onPress={() => {
-                  router.navigate('/');
-                  router.setParams({ newChat: 'true' });
-                }}
-              />
-              <IconSymbol
-                name="gearshape.fill"
-                size={24}
-                color={Colors[colorScheme].tint}
-                onPress={() => router.navigate('/settings')}
-              />
-            </View>
-          ),
-        }}
-      />
-      <Stack.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          presentation: 'modal',
-          headerStyle: {
-            backgroundColor: Colors[colorScheme].background,
-          },
-          headerTintColor: Colors[colorScheme].text,
-        }}
-      />
+            headerRight: () => (
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                <IconSymbol
+                  name="plus"
+                  size={24}
+                  color={Colors[colorScheme].tint}
+                  onPress={() => {
+                    router.navigate('/');
+                    router.setParams({ newChat: 'true' });
+                  }}
+                />
+                <IconSymbol
+                  name="gearshape.fill"
+                  size={24}
+                  color={Colors[colorScheme].tint}
+                  onPress={() => router.navigate('/settings')}
+                />
+              </View>
+            ),
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            presentation: 'modal',
+            headerStyle: {
+              backgroundColor: Colors[colorScheme].background,
+            },
+            headerTintColor: Colors[colorScheme].text,
+          }}
+        />
       </Stack>
 
       {showModels && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.overlay}
           activeOpacity={1}
           onPress={() => setShowModels(false)}
@@ -130,7 +133,7 @@ export default function Layout() {
                 onPress={() => handleModelSelect(modelKey as keyof typeof MODELS)}
                 style={styles.dropdownItem}
               >
-                <ThemedText 
+                <ThemedText
                   type="defaultSemiBold"
                   lightColor={Colors.light.text}
                   darkColor={Colors.dark.text}
