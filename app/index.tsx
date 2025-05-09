@@ -74,8 +74,9 @@ export default function ChatScreen() {
       
       await createChatCompletion({
         messages: messagesForApi,
-        model: MODELS.OPENAI.name,
-        baseURL: MODELS.OPENAI.baseURL,
+        model: MODELS[selectedModel].name,
+        baseURL: MODELS[selectedModel].baseURL,
+
         onData: (deltaContent) => {
           accumulatedContent += deltaContent;
           setMessages(prev =>
