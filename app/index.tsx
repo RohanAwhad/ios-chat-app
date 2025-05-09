@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createChatCompletion } from '@/services/api';
+import { MODELS } from '@/constants/Models';
 import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
@@ -68,83 +70,32 @@ export default function ChatScreen() {
     let accumulatedContent = '';
 
     try {
-      const apiKey = await AsyncStorage.getItem('openai-api-key');
-      if (!apiKey) {
-        Alert.alert('Error', 'Please set your API key in settings first');
-        // Remove the placeholder assistant message if API key is missing
-        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
-        return;
-      }
-
-      // Use XHR instead of fetch to properly handle streaming in React Native
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'https://api.openai.com/v1/chat/completions');
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
-
-      let buffer = '';
-      xhr.onprogress = (event) => {
-        if (xhr.readyState === 3) { // LOADING state - receiving data
-          const chunk = xhr.responseText.substring(buffer.length);
-          buffer += chunk;
-
-          const lines = chunk.split('\n\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.substring(6).trim();
-              if (data === '[DONE]') break;
-
-              try {
-                const parsed = JSON.parse(data);
-                const deltaContent = parsed.choices[0]?.delta?.content;
-                if (deltaContent) {
-                  accumulatedContent += deltaContent;
-                  setMessages(prev =>
-                    prev.map(msg =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
-                        : msg
-                    )
-                  );
-                }
-              } catch (e) {
-                console.error('Error parsing stream data:', e, 'Data:', data);
-              }
-            }
-          }
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 400) {
-          const errorData = JSON.parse(xhr.responseText);
-          const errorMessage = errorData.error?.message || `API Error: ${xhr.status}`;
+      let accumulatedContent = '';
+      
+      await createChatCompletion({
+        messages: messagesForApi,
+        model: MODELS.OPENAI.name,
+        baseURL: MODELS.OPENAI.baseURL,
+        onData: (deltaContent) => {
+          accumulatedContent += deltaContent;
           setMessages(prev =>
             prev.map(msg =>
-              msg.id === assistantMessageId ? { ...msg, content: errorMessage } : msg
+              msg.id === assistantMessageId
+                ? { ...msg, content: accumulatedContent }
+                : msg
+            )
+          );
+        },
+        onError: (errorMessage) => {
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: accumulatedContent ? `${accumulatedContent}\n${errorMessage}` : errorMessage }
+                : msg
             )
           );
         }
-      };
-
-      xhr.onerror = () => {
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: 'Network error - failed to connect to API' }
-              : msg
-          )
-        );
-      };
-
-      xhr.send(JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant.' },
-          ...messagesForApi,
-        ],
-        stream: true,
-      }));
+      });
     } catch (error: any) { // Catches network errors, AsyncStorage errors, etc.
       console.error('API call failed:', error);
       const errorMessage = `Error: ${error.message || 'Failed to get response'}`;
