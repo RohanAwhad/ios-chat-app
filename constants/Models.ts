@@ -5,8 +5,13 @@ export type ModelConfig = {
 };
 
 export const MODELS = {
-  OPENAI: {
+  GPT_4O_MINI: {
     name: 'gpt-4o-mini',
+    baseURL: 'https://api.openai.com/v1',
+    apiKeyName: 'openai-api-key'
+  },
+  GPT_4O: {
+    name: 'gpt-4o',
     baseURL: 'https://api.openai.com/v1',
     apiKeyName: 'openai-api-key'
   },
