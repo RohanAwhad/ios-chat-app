@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { router } from 'expo-router';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Colors } from '@/constants/Colors';
@@ -21,7 +20,7 @@ type Message = {
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
-  
+
   useEffect(() => {
     if (params.newChat === 'true') {
       setMessages([]);
@@ -166,71 +165,71 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.select({ ios: 90, android: 100 })}
         style={styles.keyboardAvoid}
       >
-      <ScrollView
-        keyboardShouldPersistTaps="always"
-        ref={scrollViewRef}
-        contentContainerStyle={styles.messagesContainer}
-        keyboardDismissMode="interactive"
-      >
-        {messages.map((message) => (
-          <ThemedView
-            key={message.id}
-            style={[
-              styles.messageBubble,
-              message.role === 'user'
-                ? { ...styles.userBubble, backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-                : { ...styles.assistantBubble, backgroundColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon },
-              message.role === 'user'
-                ? { alignSelf: 'flex-end' }
-                : { alignSelf: 'flex-start' }
-            ]}
-          >
-            <ThemedText
+        <ScrollView
+          keyboardShouldPersistTaps="always"
+          ref={scrollViewRef}
+          contentContainerStyle={styles.messagesContainer}
+          keyboardDismissMode="interactive"
+        >
+          {messages.map((message) => (
+            <ThemedView
+              key={message.id}
               style={[
-                styles.messageText,
+                styles.messageBubble,
                 message.role === 'user'
-                  ? { color: theme === 'light' ? Colors.dark.text : Colors.light.text } // User text color based on bubble
-                  : { color: theme === 'light' ? Colors.dark.text : Colors.light.text }  // Assistant text color (can be different)
+                  ? { ...styles.userBubble, backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+                  : { ...styles.assistantBubble, backgroundColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon },
+                message.role === 'user'
+                  ? { alignSelf: 'flex-end' }
+                  : { alignSelf: 'flex-start' }
               ]}
             >
-              {message.content}
-            </ThemedText>
-          </ThemedView>
-        ))}
-      </ScrollView>
+              <ThemedText
+                style={[
+                  styles.messageText,
+                  message.role === 'user'
+                    ? { color: theme === 'light' ? Colors.dark.text : Colors.light.text } // User text color based on bubble
+                    : { color: theme === 'light' ? Colors.dark.text : Colors.light.text }  // Assistant text color (can be different)
+                ]}
+              >
+                {message.content}
+              </ThemedText>
+            </ThemedView>
+          ))}
+        </ScrollView>
 
-      <ThemedView
-        style={[
-          styles.inputContainer,
-          { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
-        ]}
-      >
-        <TextInput
+        <ThemedView
           style={[
-            styles.input,
-            {
-              color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-              backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-            }
+            styles.inputContainer,
+            { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
           ]}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Type your message..."
-          placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-          multiline
-        />
-        <TouchableOpacity
-          onPress={handleSend}
-          disabled={!inputText.trim()}
-          style={styles.sendButton}
         >
-          <IconSymbol
-            name="paperplane.fill"
-            size={24}
-            color={theme === 'light' ? Colors.light.tint : Colors.dark.tint}
+          <TextInput
+            style={[
+              styles.input,
+              {
+                color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+                backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+              }
+            ]}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Type your message..."
+            placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+            multiline
           />
-        </TouchableOpacity>
-      </ThemedView>
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={!inputText.trim()}
+            style={styles.sendButton}
+          >
+            <IconSymbol
+              name="paperplane.fill"
+              size={24}
+              color={theme === 'light' ? Colors.light.tint : Colors.dark.tint}
+            />
+          </TouchableOpacity>
+        </ThemedView>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -271,8 +270,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center', // Align items to center for multiline input
     gap: 8, // Reduced gap
-    paddingVertical: 8,
-    paddingHorizontal: 12, // Added horizontal padding
+    paddingTop: 8,
+    paddingBottom: 36,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     // borderTopColor is set dynamically
   },
