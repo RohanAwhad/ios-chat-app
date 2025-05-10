@@ -38,14 +38,18 @@ export default function HistoryScreen() {
           <TouchableOpacity
             style={[
               styles.chatItem,
-              { backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background }
+              { 
+                backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+                borderColor: Colors[theme].icon // Dynamic border color
+              }
             ]}
             onPress={() => router.navigate(`/?chatId=${item.id}`)}
           >
-            <ThemedText type="defaultSemiBold">{item.title}</ThemedText>
-            <ThemedText type="default" style={styles.date}>
+            <ThemedText type="defaultSemiBold" style={{flex: 1}} numberOfLines={1} ellipsizeMode="tail">{item.title}</ThemedText>
+            <ThemedText type="default" style={[styles.date, {color: Colors[theme].icon}]}>
               {new Date(item.createdAt).toLocaleDateString()}
             </ThemedText>
+
             <IconSymbol
               name="chevron.right"
               size={16}
@@ -67,6 +71,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 20,
+    paddingHorizontal: 8, // Added to align with list items if container has padding
   },
   list: {
     gap: 12,
@@ -74,17 +79,20 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 20, // Increased padding for better touch area and spacing
+    borderRadius: 10, // Slightly more rounded
     borderWidth: 1,
-    borderColor: Colors.light.icon,
+    // borderColor will be set dynamically based on theme
   },
   date: {
     marginLeft: 'auto',
-    marginRight: 16,
-    color: Colors.light.icon,
+    marginRight: 12, // Adjusted spacing
+    fontSize: 14, // Slightly smaller date text
+    // color will be set by ThemedText or dynamically
   },
   chevron: {
-    transform: [{ rotate: '180deg' }],
+    // transform: [{ rotate: '180deg' }], // Removed rotation
   },
 });
+

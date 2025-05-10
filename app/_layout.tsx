@@ -91,19 +91,16 @@ export default function Layout() {
               />
             ),
             headerRight: () => (
-              <View style={{ flexDirection: 'row', gap: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 16, marginRight: 16 }}>
                 <IconSymbol
                   name="plus"
                   size={24}
                   color={Colors[colorScheme].tint}
                   onPress={() => {
                     console.log("Plus icon pressed, creating new chat");
-                    // Only use newChat parameter, don't set chatId
                     router.navigate(`/?newChat=true`);
                   }}
                 />
-
-
                 <IconSymbol
                   name="gearshape.fill"
                   size={24}
@@ -112,6 +109,17 @@ export default function Layout() {
                 />
               </View>
             ),
+          }}
+        />
+        <Stack.Screen
+          name="history"
+          options={{
+            title: 'Chat History',
+            presentation: 'modal',
+            headerStyle: {
+              backgroundColor: Colors[colorScheme].background,
+            },
+            headerTintColor: Colors[colorScheme].text,
           }}
         />
         <Stack.Screen
@@ -128,6 +136,7 @@ export default function Layout() {
       </Stack>
 
       {showModels && (
+
         <TouchableOpacity
           style={styles.overlay}
           activeOpacity={1}
