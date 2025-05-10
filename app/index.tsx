@@ -22,13 +22,45 @@ type Message = {
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  // Load or initialize chat
   useEffect(() => {
-    if (params.newChat === 'true') {
-      setMessages([]);
-      router.setParams({ newChat: undefined });
+    const initializeChat = async () => {
+      if (params.chatId) {
+        // Load existing chat
+        const history = await getChatHistory();
+        const chat = history.find(c => c.id === params.chatId);
+        if (chat) {
+          setMessages(chat.messages);
+          setCurrentChatId(chat.id);
+        }
+      } else if (params.newChat) {
+        // Create new chat
+        const newChatId = Date.now().toString();
+        setCurrentChatId(newChatId);
+        setMessages([]);
+        router.setParams({ newChat: undefined });
+      }
+    };
+    initializeChat();
+  }, [params.chatId, params.newChat]);
+
+  // Auto-save chat when messages change
+  useEffect(() => {
+    if (currentChatId && messages.length > 0) {
+      const saveCurrentChat = async () => {
+        await saveChat({
+          id: currentChatId,
+          title: messages[0]?.content.substring(0, 50) || 'New Chat',
+          messages,
+          createdAt: Date.now()
+        });
+      };
+      saveCurrentChat();
     }
-  }, [params.newChat]);
+  }, [messages, currentChatId]);
+
   const [inputText, setInputText] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useColorScheme() ?? 'light';
@@ -89,7 +121,7 @@ export default function ChatScreen() {
 
     try {
       let accumulatedContent = '';
-      
+
       await createChatCompletion({
         messages: messagesForApi,
         model: modelConfig.name,

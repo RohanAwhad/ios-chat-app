@@ -81,6 +81,15 @@ export default function Layout() {
               backgroundColor: Colors[colorScheme].background,
             },
 
+            headerLeft: () => (
+              <IconSymbol
+                name="clock"
+                size={24}
+                color={Colors[colorScheme].tint}
+                onPress={() => router.navigate('/history')}
+                style={{ marginLeft: 16 }}
+              />
+            ),
             headerRight: () => (
               <View style={{ flexDirection: 'row', gap: 16 }}>
                 <IconSymbol
@@ -88,10 +97,11 @@ export default function Layout() {
                   size={24}
                   color={Colors[colorScheme].tint}
                   onPress={() => {
-                    router.navigate('/');
-                    router.setParams({ newChat: 'true' });
+                    const newChatId = Date.now().toString();
+                    router.navigate(`/?chatId=${newChatId}&newChat=true`);
                   }}
                 />
+
                 <IconSymbol
                   name="gearshape.fill"
                   size={24}
