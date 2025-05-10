@@ -97,10 +97,12 @@ export default function Layout() {
                   size={24}
                   color={Colors[colorScheme].tint}
                   onPress={() => {
-                    const newChatId = Date.now().toString();
-                    router.navigate(`/?chatId=${newChatId}&newChat=true`);
+                    console.log("Plus icon pressed, creating new chat");
+                    // Only use newChat parameter, don't set chatId
+                    router.navigate(`/?newChat=true`);
                   }}
                 />
+
 
                 <IconSymbol
                   name="gearshape.fill"

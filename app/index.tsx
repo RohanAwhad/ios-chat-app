@@ -27,24 +27,49 @@ export default function ChatScreen() {
   // Load or initialize chat
   useEffect(() => {
     const initializeChat = async () => {
-      if (params.chatId) {
+      console.log("Initialize chat effect triggered with params:", JSON.stringify(params));
+      
+      // Check for newChat first - prioritize creating a new chat
+      if (params.newChat === "true") {
+        console.log("Creating new chat from newChat param");
+        // Create new chat
+        const newChatId = Date.now().toString();
+        console.log("Generated new chat ID:", newChatId);
+        setCurrentChatId(newChatId);
+        setMessages([]);
+        // Clear the newChat parameter from the URL
+        router.setParams({ newChat: undefined });
+      } 
+      // Only load existing chat if not creating a new one
+      else if (params.chatId) {
+        console.log("Loading existing chat with ID:", params.chatId);
         // Load existing chat
         const history = await getChatHistory();
         const chat = history.find(c => c.id === params.chatId);
         if (chat) {
+          console.log("Found chat in history, loading messages");
           setMessages(chat.messages);
           setCurrentChatId(chat.id);
+        } else {
+          console.log("Chat not found in history even though chatId provided");
+          // Handle missing chat by creating a new one
+          const newChatId = Date.now().toString();
+          console.log("Creating replacement chat with ID:", newChatId);
+          setCurrentChatId(newChatId);
+          setMessages([]);
         }
-      } else if (params.newChat) {
-        // Create new chat
+      } else {
+        console.log("No chatId or newChat params, starting with empty state");
+        // Ensure we always have a valid chat ID
         const newChatId = Date.now().toString();
         setCurrentChatId(newChatId);
         setMessages([]);
-        router.setParams({ newChat: undefined });
       }
     };
     initializeChat();
   }, [params.chatId, params.newChat]);
+
+
 
   // Auto-save chat when messages change
   useEffect(() => {
