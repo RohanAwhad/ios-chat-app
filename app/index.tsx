@@ -39,6 +39,15 @@ export default function ChatScreen() {
         return;
       }
 
+      if (params.newChat === "true") {
+        const newChatId = Date.now().toString();
+        console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
+        setCurrentChatId(newChatId);
+        setMessages([]);
+        router.replace(`/?chatId=${newChatId}`); // Remove isNew flag
+        return;
+      }
+
       if (params.chatId) {
         const chatIdFromParam = params.chatId as string;
 
@@ -55,9 +64,9 @@ export default function ChatScreen() {
         if (chat) {
           console.log("[ChatScreen InitializeChat] Chat found in history. Loading messages:", chat.messages.length);
           setCurrentChatId(chat.id);
-          setMessages(chat.messages); // messages are StoredMessage[], compatible with UI Message[]
+          setMessages(chat.messages);
         } else {
-          console.log(`[ChatScreen InitializeChat] Chat ${chatIdFromParam} not in history. Starting new chat with this ID.`);
+          console.log(`[ChatScreen InitializeChat] Chat ${chatIdFromParam} not found in history. Starting new chat with this ID.`);
           setCurrentChatId(chatIdFromParam);
           setMessages([]);
         }
@@ -67,10 +76,11 @@ export default function ChatScreen() {
         console.log("[ChatScreen InitializeChat] No params and no active chat. Creating default new chat. ID:", newChatId);
         setCurrentChatId(newChatId);
         setMessages([]);
-        router.replace(`/?chatId=${newChatId}&isNew=true`); // Add isNew flag
+        router.replace(`/?chatId=${newChatId}`);
       } else {
         console.log(`[ChatScreen InitializeChat] No relevant params, but chat ${currentChatId} is active. Maintaining current state.`);
       }
+
     };
 
     initializeChat();
@@ -80,14 +90,8 @@ export default function ChatScreen() {
 
   // Auto-save chat when messages change
   useEffect(() => {
-    // Remove isNew param when we have messages
-    if (currentChatId && messages.length > 0 && params.isNew) {
-      router.replace({ pathname: '/', params: { chatId: currentChatId } });
-    }
-
     // Save chat when messages change
     if (currentChatId && messages.length > 0) {
-
       console.log(`[ChatScreen SaveEffect] Attempting to save chat ID: ${currentChatId}, messages count: ${messages.length}`);
       const saveCurrentChat = async () => {
         await saveChat({
@@ -102,6 +106,7 @@ export default function ChatScreen() {
       console.log(`[ChatScreen SaveEffect] Not saving. currentChatId: ${currentChatId}, messages.length: ${messages.length}`);
     }
   }, [messages, currentChatId]);
+
 
   const [inputText, setInputText] = useState('');
 

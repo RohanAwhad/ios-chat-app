@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
 
 export default function Layout() {
   const params = useGlobalSearchParams();
-  if (Object.keys(params).length === 0) params.isNew = "true"
+
 
 
   const colorScheme = useColorScheme() ?? 'light';
@@ -99,18 +99,14 @@ export default function Layout() {
                 <IconSymbol
                   name="plus"
                   size={24}
-                  color={params.isNew ? Colors[colorScheme].icon : Colors[colorScheme].tint}
+                  color={Colors[colorScheme].tint}
                   onPress={() => {
-                    if (!params.isNew) {
-                      console.log("Plus icon pressed, creating new chat");
-                      router.replace(`/?newChat=true`);
-                    }
+                    console.log("Plus icon pressed, creating new chat");
+                    router.replace(`/?newChat=true`);
                   }}
-                  style={{
-                    marginLeft: 16,
-                    opacity: params.isNew ? 0.5 : 1
-                  }}
+                  style={{ marginLeft: 16 }}
                 />
+
 
                 <IconSymbol
                   name="gearshape.fill"
