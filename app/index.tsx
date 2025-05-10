@@ -6,31 +6,111 @@ import { createChatCompletion } from '@/services/api';
 import { MODELS } from '@/constants/Models';
 import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { getChatHistory, saveChat } from '@/services/chatStorage'; // Import chat storage functions
 
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
+// This Message type is used by the ChatScreen UI and includes an 'id' for React keys.
+// It's compatible with StoredMessage in chatStorage.ts
 type Message = {
   role: 'user' | 'assistant';
   content: string;
   id: string;
 };
 
-
-
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
+  // Load or initialize chat
   useEffect(() => {
-    if (params.newChat === 'true') {
-      setMessages([]);
-      router.setParams({ newChat: undefined });
+    const initializeChat = async () => {
+      console.log("[ChatScreen InitializeChat] Triggered. Params:", JSON.stringify(params), "CurrentChatID before:", currentChatId);
+
+      if (params.newChat === "true") {
+        const newChatId = Date.now().toString();
+        console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
+        setCurrentChatId(newChatId);
+        setMessages([]);
+        router.replace(`/?chatId=${newChatId}&isNew=true`); // Add isNew flag
+        return;
+      }
+
+      if (params.newChat === "true") {
+        const newChatId = Date.now().toString();
+        console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
+        setCurrentChatId(newChatId);
+        setMessages([]);
+        router.replace(`/?chatId=${newChatId}`); // Remove isNew flag
+        return;
+      }
+
+      if (params.chatId) {
+        const chatIdFromParam = params.chatId as string;
+
+        // If we're already viewing this chat and have messages, don't reload
+        if (chatIdFromParam === currentChatId && messages.length > 0) {
+          console.log(`[ChatScreen InitializeChat] Already on chat ${chatIdFromParam}. Current messages: ${messages.length}`);
+          return;
+        }
+
+        console.log(`[ChatScreen InitializeChat] Loading chat for ID: ${chatIdFromParam}`);
+        const history = await getChatHistory();
+        const chat = history.find(c => c.id === chatIdFromParam);
+
+        if (chat) {
+          console.log("[ChatScreen InitializeChat] Chat found in history. Loading messages:", chat.messages.length);
+          setCurrentChatId(chat.id);
+          setMessages(chat.messages);
+        } else {
+          console.log(`[ChatScreen InitializeChat] Chat ${chatIdFromParam} not found in history. Starting new chat with this ID.`);
+          setCurrentChatId(chatIdFromParam);
+          setMessages([]);
+        }
+      } else if (!currentChatId) {
+        // No params, and no chat active (e.g., initial app load without specific chat in URL)
+        const newChatId = Date.now().toString();
+        console.log("[ChatScreen InitializeChat] No params and no active chat. Creating default new chat. ID:", newChatId);
+        setCurrentChatId(newChatId);
+        setMessages([]);
+        router.replace(`/?chatId=${newChatId}`);
+      } else {
+        console.log(`[ChatScreen InitializeChat] No relevant params, but chat ${currentChatId} is active. Maintaining current state.`);
+      }
+
+    };
+
+    initializeChat();
+  }, [params.chatId, params.newChat]); // Dependencies: params that guide initialization
+
+
+
+  // Auto-save chat when messages change
+  useEffect(() => {
+    // Save chat when messages change
+    if (currentChatId && messages.length > 0) {
+      console.log(`[ChatScreen SaveEffect] Attempting to save chat ID: ${currentChatId}, messages count: ${messages.length}`);
+      const saveCurrentChat = async () => {
+        await saveChat({
+          id: currentChatId!, // currentChatId is checked, so it's not null
+          title: messages[0]?.content.substring(0, 50) || 'New Chat',
+          messages, // These are UI Message type, compatible with StoredMessage
+          createdAt: Date.now()
+        });
+      };
+      saveCurrentChat();
+    } else {
+      console.log(`[ChatScreen SaveEffect] Not saving. currentChatId: ${currentChatId}, messages.length: ${messages.length}`);
     }
-  }, [params.newChat]);
+  }, [messages, currentChatId]);
+
+
   const [inputText, setInputText] = useState('');
+
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useColorScheme() ?? 'light';
 
@@ -91,7 +171,7 @@ export default function ChatScreen() {
 
     try {
       let accumulatedContent = '';
-      
+
       await createChatCompletion({
         messages: messagesForApi,
         model: modelConfig.name,

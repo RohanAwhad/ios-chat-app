@@ -1,4 +1,5 @@
-import { Stack, router } from 'expo-router';
+import { Stack, router, useGlobalSearchParams } from 'expo-router';
+
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
@@ -9,6 +10,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MODELS } from '@/constants/Models';
+import { getChatHistory } from '@/services/chatStorage';
 
 const styles = StyleSheet.create({
   overlay: {
@@ -37,6 +39,9 @@ const styles = StyleSheet.create({
 });
 
 export default function Layout() {
+  const params = useGlobalSearchParams();
+
+
 
   const colorScheme = useColorScheme() ?? 'light';
   const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O_MINI');
@@ -81,17 +86,44 @@ export default function Layout() {
               backgroundColor: Colors[colorScheme].background,
             },
 
+            headerLeft: () => (
+              <IconSymbol
+                name="clock"
+                size={24}
+                color={Colors[colorScheme].tint}
+                onPress={() => router.navigate('/history')}
+                style={{ marginLeft: 16 }}
+              />
+            ),
             headerRight: () => (
-              <View style={{ flexDirection: 'row', gap: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 16, marginRight: 16 }}>
                 <IconSymbol
                   name="plus"
                   size={24}
                   color={Colors[colorScheme].tint}
-                  onPress={() => {
-                    router.navigate('/');
-                    router.setParams({ newChat: 'true' });
+                  onPress={async () => {
+                    if (!params.chatId) {
+                      // If we're not in a chat yet, we're already at the home screen
+                      console.log("Already on home screen - not creating a new one");
+                      return;
+                    }
+
+                    const history = await getChatHistory();
+                    const currentChat = history.find(c => c.id === params.chatId);
+
+                    // Create a new chat only if current chat has messages
+                    if (currentChat && currentChat.messages.length > 0) {
+                      console.log("Creating new chat from existing chat with messages");
+                      router.replace(`/?newChat=true`);
+                    } else {
+                      console.log("Current chat is empty or doesn't exist - not creating a new one");
+                    }
                   }}
+                  style={{ marginLeft: 16 }}
                 />
+
+
+
                 <IconSymbol
                   name="gearshape.fill"
                   size={24}
@@ -100,6 +132,17 @@ export default function Layout() {
                 />
               </View>
             ),
+          }}
+        />
+        <Stack.Screen
+          name="history"
+          options={{
+            title: 'Chat History',
+            presentation: 'modal',
+            headerStyle: {
+              backgroundColor: Colors[colorScheme].background,
+            },
+            headerTintColor: Colors[colorScheme].text,
           }}
         />
         <Stack.Screen
@@ -116,6 +159,7 @@ export default function Layout() {
       </Stack>
 
       {showModels && (
+
         <TouchableOpacity
           style={styles.overlay}
           activeOpacity={1}

@@ -20,6 +20,8 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'gearshape.fill': 'settings',
   'plus': 'add',
+  'clock': 'access-time',
+
 } as IconMapping;
 
 /**
