@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { router } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -12,15 +13,22 @@ export default function HistoryScreen() {
   const [chats, setChats] = useState<ChatThread[]>([]);
   const theme = useColorScheme() ?? 'light';
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      setChats(await getChatHistory());
-    };
-    loadHistory();
-  }, []);
+  // useFocusEffect to reload history when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadHistory = async () => {
+        console.log("[HistoryScreen] Loading chat history");
+        const loadedChats = await getChatHistory();
+        console.log(`[HistoryScreen] Loaded ${loadedChats.length} chats`);
+        setChats(loadedChats);
+      };
+      loadHistory();
+    }, [])
+  );
 
   return (
     <ThemedView style={styles.container}>
+
       <ThemedText type="title" style={styles.title}>Chat History</ThemedText>
       
       <FlatList
