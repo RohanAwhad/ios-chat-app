@@ -25,4 +25,15 @@ export const MODELS = {
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
     apiKeyName: 'gemini-api-key'
   },
+  CLAUDE_HAIKU: {
+    name: 'claude-3-5-haiku-latest',
+    baseURL: 'https://api.anthropic.com/v1',
+    apiKeyName: 'anthropic-api-key'
+  },
+  CLAUDE_SONNET: {
+    name: 'claude-3-7-sonnet-20250219',
+    baseURL: 'https://api.anthropic.com/v1',
+    apiKeyName: 'anthropic-api-key'
+  },
+
 } as const;
