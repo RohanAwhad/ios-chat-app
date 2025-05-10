@@ -39,6 +39,7 @@ const styles = StyleSheet.create({
 
 export default function Layout() {
   const params = useGlobalSearchParams();
+  if (Object.keys(params).length === 0) params.isNew = "true"
 
 
   const colorScheme = useColorScheme() ?? 'light';
@@ -105,7 +106,7 @@ export default function Layout() {
                       router.replace(`/?newChat=true`);
                     }
                   }}
-                  style={{ 
+                  style={{
                     marginLeft: 16,
                     opacity: params.isNew ? 0.5 : 1
                   }}

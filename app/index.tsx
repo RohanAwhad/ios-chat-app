@@ -36,25 +36,26 @@ export default function ChatScreen() {
         setCurrentChatId(newChatId);
         setMessages([]);
         router.replace(`/?chatId=${newChatId}&isNew=true`); // Add isNew flag
-
         return;
       }
 
       if (params.chatId) {
         const chatIdFromParam = params.chatId as string;
-        // Avoid reloading if already on the correct chat and messages are present, or if it's the chat we just created
-        if (chatIdFromParam === currentChatId && (messages.length > 0 || params.newChat === undefined /* implies it's not result of immediate newChat redirect */ )) {
+
+        // If we're already viewing this chat and have messages, don't reload
+        if (chatIdFromParam === currentChatId && messages.length > 0) {
           console.log(`[ChatScreen InitializeChat] Already on chat ${chatIdFromParam}. Current messages: ${messages.length}`);
           return;
         }
-        
+
         console.log(`[ChatScreen InitializeChat] Loading chat for ID: ${chatIdFromParam}`);
         const history = await getChatHistory();
         const chat = history.find(c => c.id === chatIdFromParam);
+
         if (chat) {
-          console.log("[ChatScreen InitializeChat] Chat found in history. Loading messages.");
-          setMessages(chat.messages); // messages are StoredMessage[], compatible with UI Message[]
+          console.log("[ChatScreen InitializeChat] Chat found in history. Loading messages:", chat.messages.length);
           setCurrentChatId(chat.id);
+          setMessages(chat.messages); // messages are StoredMessage[], compatible with UI Message[]
         } else {
           console.log(`[ChatScreen InitializeChat] Chat ${chatIdFromParam} not in history. Starting new chat with this ID.`);
           setCurrentChatId(chatIdFromParam);
@@ -67,15 +68,14 @@ export default function ChatScreen() {
         setCurrentChatId(newChatId);
         setMessages([]);
         router.replace(`/?chatId=${newChatId}&isNew=true`); // Add isNew flag
-
-        return;
       } else {
-         console.log(`[ChatScreen InitializeChat] No relevant params, but chat ${currentChatId} is active. Maintaining current state.`);
+        console.log(`[ChatScreen InitializeChat] No relevant params, but chat ${currentChatId} is active. Maintaining current state.`);
       }
     };
 
     initializeChat();
   }, [params.chatId, params.newChat]); // Dependencies: params that guide initialization
+
 
 
   // Auto-save chat when messages change
