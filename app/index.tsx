@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createChatCompletion } from '@/services/api';
 import { MODELS } from '@/constants/Models';
@@ -35,7 +36,7 @@ export default function ChatScreen() {
 
   const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O_MINI');
 
-  useEffect(() => {
+  useFocusEffect(() => {
     const loadModel = async () => {
       const savedModel = await AsyncStorage.getItem('selected-model');
       if (savedModel && Object.keys(MODELS).includes(savedModel)) {
@@ -43,7 +44,8 @@ export default function ChatScreen() {
       }
     };
     loadModel();
-  }, []);
+  });
+
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
