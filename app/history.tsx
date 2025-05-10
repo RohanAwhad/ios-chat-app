@@ -30,7 +30,7 @@ export default function HistoryScreen() {
     <ThemedView style={styles.container}>
 
       <ThemedText type="title" style={styles.title}>Chat History</ThemedText>
-      
+
       <FlatList
         data={chats}
         keyExtractor={item => item.id}
@@ -38,24 +38,23 @@ export default function HistoryScreen() {
           <TouchableOpacity
             style={[
               styles.chatItem,
-              { 
+              {
                 backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
                 borderColor: Colors[theme].icon // Dynamic border color
               }
             ]}
             onPress={() => {
+              // First dismiss the modal, then navigate to the chat
+              router.dismiss();
               router.replace({
                 pathname: '/',
                 params: { chatId: item.id }
               });
-              router.dismiss(); // Dismiss the history modal after selection
-
             }}
-
-
           >
-            <ThemedText type="defaultSemiBold" style={{flex: 1}} numberOfLines={1} ellipsizeMode="tail">{item.title}</ThemedText>
-            <ThemedText type="default" style={[styles.date, {color: Colors[theme].icon}]}>
+
+            <ThemedText type="defaultSemiBold" style={{ flex: 1 }} numberOfLines={1} ellipsizeMode="tail">{item.title}</ThemedText>
+            <ThemedText type="default" style={[styles.date, { color: Colors[theme].icon }]}>
               {new Date(item.createdAt).toLocaleDateString()}
             </ThemedText>
 
