@@ -31,9 +31,16 @@ export async function createChatCompletion({
     }
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${baseURL}/chat/completions`);
+    const isAnthropic = model.startsWith('claude');
+    const endpoint = isAnthropic ? 'messages' : 'chat/completions';
+    
+    xhr.open('POST', `${baseURL}/${endpoint}`);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Authorization', `Bearer ${finalApiKey}`);
+    if (isAnthropic) {
+      xhr.setRequestHeader('anthropic-version', '2023-06-01');
+      xhr.setRequestHeader('x-api-key', finalApiKey);
+    }
 
     let buffer = '';
     xhr.onprogress = (event) => {
@@ -41,16 +48,25 @@ export async function createChatCompletion({
         const chunk = xhr.responseText.substring(buffer.length);
         buffer += chunk;
 
-        const lines = chunk.split('\n\n');
+        const lines = chunk.split('\n');
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.substring(6).trim();
-            if (data === '[DONE]') break;
-
+            
             try {
               const parsed = JSON.parse(data);
-              const deltaContent = parsed.choices[0]?.delta?.content;
-              if (deltaContent) onData(deltaContent);
+              if (isAnthropic) {
+                // Handle Anthropic's SSE format
+                if (parsed.type === 'content_block_delta') {
+                  const deltaContent = parsed.delta?.text;
+                  if (deltaContent) onData(deltaContent);
+                }
+              } else {
+                // Handle OpenAI format
+                if (data === '[DONE]') break;
+                const deltaContent = parsed.choices[0]?.delta?.content;
+                if (deltaContent) onData(deltaContent);
+              }
             } catch (e) {
               console.error('Error parsing stream data:', e, 'Data:', data);
             }
@@ -58,6 +74,7 @@ export async function createChatCompletion({
         }
       }
     };
+
 
     xhr.onload = () => {
       if (xhr.status >= 400) {
@@ -70,12 +87,14 @@ export async function createChatCompletion({
 
     xhr.send(JSON.stringify({
       model,
-      messages: [
+      messages: isAnthropic ? messages : [
         { role: 'system', content: 'You are a helpful assistant.' },
         ...messages,
       ],
+      max_tokens: isAnthropic ? 1024 : undefined,
       stream: true,
     }));
+
 
   } catch (error: any) {
     onError(error.message || 'Failed to get response');
