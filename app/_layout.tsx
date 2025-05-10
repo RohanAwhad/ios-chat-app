@@ -1,4 +1,5 @@
-import { Stack, router } from 'expo-router';
+import { Stack, router, useGlobalSearchParams } from 'expo-router';
+
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
@@ -37,6 +38,8 @@ const styles = StyleSheet.create({
 });
 
 export default function Layout() {
+  const params = useGlobalSearchParams();
+
 
   const colorScheme = useColorScheme() ?? 'light';
   const [selectedModel, setSelectedModel] = useState<keyof typeof MODELS>('GPT_4O_MINI');
@@ -95,13 +98,19 @@ export default function Layout() {
                 <IconSymbol
                   name="plus"
                   size={24}
-                  color={Colors[colorScheme].tint}
+                  color={params.isNew ? Colors[colorScheme].icon : Colors[colorScheme].tint}
                   onPress={() => {
-                    console.log("Plus icon pressed, creating new chat");
-                    router.replace(`/?newChat=true`);
+                    if (!params.isNew) {
+                      console.log("Plus icon pressed, creating new chat");
+                      router.replace(`/?newChat=true`);
+                    }
                   }}
-
+                  style={{ 
+                    marginLeft: 16,
+                    opacity: params.isNew ? 0.5 : 1
+                  }}
                 />
+
                 <IconSymbol
                   name="gearshape.fill"
                   size={24}

@@ -46,8 +46,10 @@ export default function HistoryScreen() {
             onPress={() => {
               router.replace({
                 pathname: '/',
-                params: { chatId: item.id },
+                params: { chatId: item.id }
               });
+              router.dismiss(); // Dismiss the history modal after selection
+
             }}
 
 
