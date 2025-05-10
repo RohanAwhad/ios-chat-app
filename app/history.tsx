@@ -43,7 +43,14 @@ export default function HistoryScreen() {
                 borderColor: Colors[theme].icon // Dynamic border color
               }
             ]}
-            onPress={() => router.navigate(`/?chatId=${item.id}`)}
+            onPress={() => {
+              router.replace({
+                pathname: '/',
+                params: { chatId: item.id },
+              });
+            }}
+
+
           >
             <ThemedText type="defaultSemiBold" style={{flex: 1}} numberOfLines={1} ellipsizeMode="tail">{item.title}</ThemedText>
             <ThemedText type="default" style={[styles.date, {color: Colors[theme].icon}]}>
