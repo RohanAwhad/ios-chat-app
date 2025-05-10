@@ -10,6 +10,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MODELS } from '@/constants/Models';
+import { getChatHistory } from '@/services/chatStorage';
 
 const styles = StyleSheet.create({
   overlay: {
@@ -100,12 +101,27 @@ export default function Layout() {
                   name="plus"
                   size={24}
                   color={Colors[colorScheme].tint}
-                  onPress={() => {
-                    console.log("Plus icon pressed, creating new chat");
-                    router.replace(`/?newChat=true`);
+                  onPress={async () => {
+                    if (!params.chatId) {
+                      // If we're not in a chat yet, we're already at the home screen
+                      console.log("Already on home screen - not creating a new one");
+                      return;
+                    }
+
+                    const history = await getChatHistory();
+                    const currentChat = history.find(c => c.id === params.chatId);
+
+                    // Create a new chat only if current chat has messages
+                    if (currentChat && currentChat.messages.length > 0) {
+                      console.log("Creating new chat from existing chat with messages");
+                      router.replace(`/?newChat=true`);
+                    } else {
+                      console.log("Current chat is empty or doesn't exist - not creating a new one");
+                    }
                   }}
                   style={{ marginLeft: 16 }}
                 />
+
 
 
                 <IconSymbol
