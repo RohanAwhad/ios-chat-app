@@ -98,8 +98,9 @@ export default function Layout() {
                   color={Colors[colorScheme].tint}
                   onPress={() => {
                     console.log("Plus icon pressed, creating new chat");
-                    router.navigate(`/?newChat=true`);
+                    router.replace(`/?newChat=true`);
                   }}
+
                 />
                 <IconSymbol
                   name="gearshape.fill"
