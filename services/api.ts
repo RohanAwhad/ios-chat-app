@@ -24,79 +24,137 @@ export async function createChatCompletion({
   onError
 }: ChatCompletionOptions) {
   try {
-    const finalApiKey = apiKey || await AsyncStorage.getItem('openai-api-key');
+    const isAnthropic = model.startsWith('claude');
+    const providerHandlers = isAnthropic ? anthropicHandlers : openaiHandlers;
+
+    // Get API key based on provider
+    const finalApiKey = apiKey || await AsyncStorage.getItem(
+      isAnthropic ? 'anthropic-api-key' : 'openai-api-key'
+    );
+
     if (!finalApiKey) {
-      Alert.alert('Error', 'Please set your API key in settings first');
+      Alert.alert('Error', `Please set your ${isAnthropic ? 'Anthropic' : 'OpenAI'} API key in settings first`);
       throw new Error('API key missing');
     }
 
     const xhr = new XMLHttpRequest();
-    const isAnthropic = model.startsWith('claude');
-    const endpoint = isAnthropic ? 'messages' : 'chat/completions';
-    
-    xhr.open('POST', `${baseURL}/${endpoint}`);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('Authorization', `Bearer ${finalApiKey}`);
-    if (isAnthropic) {
-      xhr.setRequestHeader('anthropic-version', '2023-06-01');
-      xhr.setRequestHeader('x-api-key', finalApiKey);
-    }
+    const { endpoint, headers, body } = providerHandlers.getRequestConfig({
+      model,
+      messages,
+      baseURL,
+      apiKey: finalApiKey
+    });
+
+    console.debug('API Request Config:', { endpoint, headers, body: JSON.parse(body) });
+
+    xhr.open('POST', endpoint);
+    Object.entries(headers).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value);
+    });
 
     let buffer = '';
     xhr.onprogress = (event) => {
       if (xhr.readyState === 3) {
         const chunk = xhr.responseText.substring(buffer.length);
         buffer += chunk;
+        console.debug('Received chunk:', chunk);
 
         const lines = chunk.split('\n');
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.substring(6).trim();
-            
-            try {
-              const parsed = JSON.parse(data);
-              if (isAnthropic) {
-                // Handle Anthropic's SSE format
-                if (parsed.type === 'content_block_delta') {
-                  const deltaContent = parsed.delta?.text;
-                  if (deltaContent) onData(deltaContent);
-                }
-              } else {
-                // Handle OpenAI format
-                if (data === '[DONE]') break;
-                const deltaContent = parsed.choices[0]?.delta?.content;
-                if (deltaContent) onData(deltaContent);
-              }
-            } catch (e) {
-              console.error('Error parsing stream data:', e, 'Data:', data);
-            }
-          }
+          providerHandlers.handleStreamData(line, onData);
         }
       }
     };
 
-
     xhr.onload = () => {
+      console.debug('Request completed with status:', xhr.status);
       if (xhr.status >= 400) {
+        console.error('API Error Response:', xhr.responseText);
         const errorData = JSON.parse(xhr.responseText);
         onError(errorData.error?.message || `API Error: ${xhr.status}`);
       }
     };
 
-    xhr.onerror = () => onError('Network error - failed to connect to API');
+    xhr.onerror = (error) => {
+      console.error('Network error:', error);
+      onError('Network error - failed to connect to API');
+    };
 
-    xhr.send(JSON.stringify({
-      model,
-      messages: isAnthropic ? messages : [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        ...messages,
-      ],
-      max_tokens: isAnthropic ? 1024 : undefined,
-      stream: true,
-    }));
-
-
+    console.debug('Sending request with body:', JSON.parse(body));
+    xhr.send(body);
   } catch (error: any) {
     onError(error.message || 'Failed to get response');
   }
 }
+
+// OpenAI-specific handlers
+const openaiHandlers = {
+  getRequestConfig: ({ model, messages, baseURL, apiKey }) => ({
+    endpoint: `${baseURL}/chat/completions`,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: 'You are a helpful assistant.' }, ...messages],
+      stream: true
+    })
+  }),
+
+  handleStreamData: (line, onData) => {
+    if (line.startsWith('data: ')) {
+      const data = line.substring(6).trim();
+      if (data === '[DONE]') {
+        console.debug('OpenAI stream completed');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(data);
+        console.debug('OpenAI stream data:', parsed);
+        const deltaContent = parsed.choices[0]?.delta?.content;
+        if (deltaContent) onData(deltaContent);
+      } catch (e) {
+        console.error('Error parsing OpenAI stream data:', e, 'Data:', data);
+      }
+    }
+  }
+};
+
+// Anthropic-specific handlers
+const anthropicHandlers = {
+  getRequestConfig: ({ model, messages, baseURL, apiKey }) => ({
+    endpoint: `${baseURL}/messages`,
+    headers: {
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01',
+      'x-api-key': apiKey
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 1024,
+      stream: true
+    })
+  }),
+
+  handleStreamData: (line, onData) => {
+    if (line.startsWith('data: ')) {
+      const data = line.substring(6).trim();
+      try {
+        const parsed = JSON.parse(data);
+        console.debug('Anthropic stream data:', parsed);
+        if (parsed.type === 'content_block_delta') {
+          const deltaContent = parsed.delta?.text;
+          if (deltaContent) onData(deltaContent);
+        }
+      } catch (e) {
+        console.error('Error parsing Anthropic stream data:', e, 'Data:', data);
+      }
+    }
+  }
+};
+
+
+
