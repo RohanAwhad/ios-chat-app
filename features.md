@@ -4,7 +4,7 @@ This is basically list of high level feature prompts that i am using to guide ai
 
 [...] Missed a few :P [...]
 
-### History Page
+### 001_History Page
 
 Problem Definition: The user needs a historical chats page to view previous chat and open them and continue their conversation thread because they disappear on clicking new chat (plus icon) and user cannot interact with them.
 
@@ -19,3 +19,18 @@ Steps:
   5. Then add click functionality to it. On-click it should open ChatScreen with that specific chat thread. 
 
 
+### 002_Upload Image
+
+Problem Defintion: I need to be able to upload images to the chat to send the them to the model because the model can understand them and assist users visually
+
+Solution that I am thinking of is:
+
+Steps:
+  1. Add a paper clip icon to the left of the input text field
+
+
+### 003_Regenerate Reply Option
+
+### 004_Copy any message
+
+### 005_Edit any message
