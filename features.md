@@ -1,5 +1,11 @@
 # Feature List
 
+- [x] 001_History Page
+- [ ] 002_Upload Image
+- [ ] 003_Regenerate Reply Option
+- [ ] 004_Copy any message
+- [ ] 005_Edit any message
+
 This is basically list of high level feature prompts that i am using to guide ai to add new features. I plan on getting better and I am recording here, so i can come back and study this.
 
 [...] Missed a few :P [...]
@@ -23,10 +29,13 @@ Steps:
 
 Problem Defintion: I need to be able to upload images to the chat to send the them to the model because the model can understand them and assist users visually
 
-Solution that I am thinking of is:
-
-Steps:
+This is how i am envisioning it:
   1. Add a paper clip icon to the left of the input text field
+  2. On clicking that icon, it should give me option for either camera or photos.
+  3. If camera, then it should open up camera, allow me to capture a photo, perform markup actions on it, eg. draw on the image using pen. (simple ios functionality)
+  4. If photos, then it should allow me to select maximum of 30 photos at a time.
+  5. Once the photos are selected, or clicked, they should be previewed just above the input text field. Horizontally scrollable.
+      - And they should also have a cross icon, so that i can remove them if i want to.
 
 
 ### 003_Regenerate Reply Option
