@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 
+import { Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createChatCompletion } from '@/services/api';
 import { MODELS } from '@/constants/Models';
@@ -110,6 +113,8 @@ export default function ChatScreen() {
 
 
   const [inputText, setInputText] = useState('');
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
 
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useColorScheme() ?? 'light';
@@ -127,7 +132,64 @@ export default function ChatScreen() {
   });
 
 
+  const handleAttachImage = async () => {
+    Alert.alert(
+      'Add Media',
+      'Choose media source',
+      [
+        {
+          text: 'Camera',
+          onPress: () => takePhoto(),
+        },
+        {
+          text: 'Photos',
+          onPress: () => pickImage(),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets) {
+      setSelectedImages(prev => [...prev, ...result.assets.map(a => a.uri)]);
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 30,
+      orderedSelection: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets) {
+      const newUris = result.assets.map(a => a.uri);
+      if (selectedImages.length + newUris.length > 30) {
+        Alert.alert('Maximum 30 images allowed');
+        return;
+      }
+      setSelectedImages(prev => [...prev, ...newUris]);
+    }
+  };
+
   const handleSend = async () => {
+
     if (!inputText.trim()) return;
 
     const currentInputText = inputText;
@@ -252,13 +314,37 @@ export default function ChatScreen() {
           ))}
         </ScrollView>
 
-        <ThemedView
-          style={[
-            styles.inputContainer,
-            { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
-          ]}
-        >
+        {selectedImages.length > 0 && (
+          <ScrollView
+            horizontal
+            style={styles.previewContainer}
+            contentContainerStyle={styles.previewContent}
+          >
+            {selectedImages.map((uri, index) => (
+              <ThemedView key={uri} style={styles.imagePreview}>
+                <Image source={{ uri }} style={styles.previewImage} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => setSelectedImages(prev => prev.filter((_, i) => i !== index))}
+                >
+                  <IconSymbol name="xmark" size={16} color={Colors[theme].text} />
+                </TouchableOpacity>
+              </ThemedView>
+            ))}
+          </ScrollView>
+        )}
+        <ThemedView style={[
+          styles.inputContainer,
+          { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
+        ]}>
+          <TouchableOpacity
+            onPress={handleAttachImage}
+            style={styles.attachButton}
+          >
+            <IconSymbol name="paperclip" size={24} color={Colors[theme].tint} />
+          </TouchableOpacity>
           <TextInput
+
             style={[
               styles.input,
               {
@@ -290,6 +376,36 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  previewContainer: {
+    maxHeight: 100,
+    paddingVertical: 8,
+  },
+  previewContent: {
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  attachButton: {
+    padding: 8,
+  },
+
   container: {
     flex: 1,
   },
