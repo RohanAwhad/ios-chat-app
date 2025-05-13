@@ -21,7 +21,7 @@ type ChatCompletionOptions = {
   baseURL?: string;
   onData: (content: string) => void;
   onError: (error: string) => void;
-  onToolCall?: (toolCall: { name: string; args: string }) => Promise<string>;
+  // onToolCall?: (toolCall: { name: string; args: string }) => Promise<string>;
 
 };
 
@@ -63,7 +63,7 @@ export async function createChatCompletion({
   baseURL = 'https://api.openai.com/v1',
   onData,
   onError,
-  onToolCall
+  // onToolCall
 }: ChatCompletionOptions) {
 
   try {
@@ -116,47 +116,83 @@ export async function createChatCompletion({
     };
 
     xhr.onload = async () => {
-      console.debug('Request completed with status:', xhr.status);
-      console.log(JSON.stringify(pendingToolCall))
-
-      console.log(onToolCall)
-      if (pendingToolCall && onToolCall) {
-        isToolCallInProgress = true;
-        try {
-          const args = JSON.parse(pendingToolCall.args);
-          const toolResult = await searchBrave(args.query);
-
-          messages.push({
-            role: 'tool',
-            content: toolResult,
-            tool_call_id: pendingToolCall.id
-          });
-
-          // Continue the conversation with tool result
-          createChatCompletion({
-            messages,
-            model,
-            apiKey,
-            baseURL,
-            onData,
-            onError,
-            onToolCall
-          });
-        } catch (error: any) {
-          onError(`Tool call failed: ${error.message}`);
-        } finally {
-          isToolCallInProgress = false;
-        }
+      if (xhr.status >= 400) {
+        const errorData = JSON.parse(xhr.responseText);
+        onError(errorData.error?.message || `API Error: ${xhr.status}`);
         return;
       }
 
-      if (xhr.status >= 400) {
+      if (pendingToolCall && pendingToolCall.id && pendingToolCall.name) {
+        isToolCallInProgress = true;
 
-        console.error('API Error Response:', xhr.responseText);
-        const errorData = JSON.parse(xhr.responseText);
-        onError(errorData.error?.message || `API Error: ${xhr.status}`);
+        try {
+          // Parse the arguments
+          const args = JSON.parse(pendingToolCall.args);
+          const toolResult = await searchBrave(args.query);
+
+          // Create updated messages with tool result
+          const updatedMessages = [
+            ...messages,
+            {
+              role: 'tool',
+              content: toolResult,
+              tool_call_id: pendingToolCall.id
+            }
+          ];
+
+          // Make a new request with the tool result
+          const followUpXhr = new XMLHttpRequest();
+          const { endpoint, headers, body } = providerHandlers.getRequestConfig({
+            model,
+            messages: updatedMessages,
+            baseURL,
+            apiKey: finalApiKey
+          });
+
+          followUpXhr.open('POST', endpoint);
+          Object.entries(headers).forEach(([key, value]) => {
+            followUpXhr.setRequestHeader(key, value);
+          });
+
+          let followUpBuffer = '';
+
+          followUpXhr.onprogress = (event) => {
+            if (followUpXhr.readyState === 3) {
+              const chunk = followUpXhr.responseText.substring(followUpBuffer.length);
+              followUpBuffer += chunk;
+
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                providerHandlers.handleStreamData(line, onData, null, () => { });
+              }
+            }
+          };
+
+          followUpXhr.onload = () => {
+            if (followUpXhr.status >= 400) {
+              console.error('Follow-up API failed with status:', followUpXhr.status);
+              console.error('Response text:', followUpXhr.responseText);
+              onError(`Follow-up API error: ${followUpXhr.status}`);
+            }
+            isToolCallInProgress = false;
+          };
+
+
+
+
+          followUpXhr.onerror = () => {
+            onError('Network error in follow-up request');
+            isToolCallInProgress = false;
+          };
+
+          followUpXhr.send(body);
+
+        } catch (error) {
+          onError(`Tool call failed: ${error.message}`);
+          isToolCallInProgress = false;
+        }
       }
-    };
+    }
 
     xhr.onerror = (error) => {
       console.error('Network error:', error);
@@ -186,17 +222,18 @@ const openaiHandlers = {
         messages: [
           { role: 'system', content: 'You are a helpful assistant.' },
           ...messages.map(msg => {
-            // If there are no images, return a simple message object
+            // Create base message with tool_call_id if present
+            const baseMsg = {
+              role: msg.role,
+              ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id })
+            };
+
             if (!msg.images || msg.images.length === 0) {
-              return {
-                role: msg.role,
-                content: msg.content
-              };
+              return { ...baseMsg, content: msg.content };
             }
 
-            // If there are images, construct the content array format
             return {
-              role: msg.role,
+              ...baseMsg,
               content: [
                 { type: 'text', text: msg.content },
                 ...msg.images.map(img => ({
