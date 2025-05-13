@@ -14,21 +14,53 @@ type Message = {
 
 type ChatCompletionOptions = {
   messages: Array<{
-    role: 'user' | 'assistant';
+    role: 'user' | 'assistant' | 'tool';
     content: string;
     images?: Array<{
       uri: string;
       base64?: string;
       mimeType: string;
     }>;
+    tool_call_id?: string;
   }>;
+
 
   model: string;
   apiKey?: string;
   baseURL?: string;
   onData: (content: string) => void;
   onError: (error: string) => void;
+  onToolCall?: (toolCall: { name: string; args: string }) => Promise<string>;
+
 };
+
+let isToolCallInProgress = false;
+
+async function searchBrave(query: string): Promise<string> {
+  try {
+    const apiKey = await AsyncStorage.getItem('brave-api-key');
+    if (!apiKey) throw new Error('Missing Brave API key');
+
+    const params = new URLSearchParams({ q: query, count: '3' });
+    const response = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
+      headers: { 'X-Subscription-Token': apiKey }
+    });
+
+    if (!response.ok) throw new Error(`Brave API error: ${response.statusText}`);
+
+    const data = await response.json();
+    const results = data.web?.results.slice(0, 3).map((r: any) => ({
+      title: r.title,
+      url: r.url,
+      description: r.description
+    })) || [];
+
+    return JSON.stringify(results);
+  } catch (error: any) {
+    console.error('Brave search failed:', error);
+    return JSON.stringify({ error: error.message });
+  }
+}
 
 export async function createChatCompletion({
   messages,
@@ -36,8 +68,10 @@ export async function createChatCompletion({
   apiKey,
   baseURL = 'https://api.openai.com/v1',
   onData,
-  onError
+  onError,
+  onToolCall
 }: ChatCompletionOptions) {
+
   try {
     const isAnthropic = model.startsWith('claude');
     const providerHandlers = isAnthropic ? anthropicHandlers : openaiHandlers;
@@ -52,8 +86,11 @@ export async function createChatCompletion({
       throw new Error('API key missing');
     }
 
+    if (isToolCallInProgress) return;
+
     const xhr = new XMLHttpRequest();
     const { endpoint, headers, body } = providerHandlers.getRequestConfig({
+
       model,
       messages,
       baseURL,
@@ -68,22 +105,58 @@ export async function createChatCompletion({
     });
 
     let buffer = '';
+    let pendingToolCall: { id: string; name: string; args: string } | null = null;
+
     xhr.onprogress = (event) => {
       if (xhr.readyState === 3) {
         const chunk = xhr.responseText.substring(buffer.length);
         buffer += chunk;
-        // console.debug('Received chunk:', chunk);
 
         const lines = chunk.split('\n');
         for (const line of lines) {
-          providerHandlers.handleStreamData(line, onData);
+          providerHandlers.handleStreamData(line, onData, (toolCall) => {
+            pendingToolCall = toolCall;
+          });
+
         }
       }
     };
 
-    xhr.onload = () => {
+    xhr.onload = async () => {
       console.debug('Request completed with status:', xhr.status);
+
+      if (pendingToolCall && onToolCall) {
+        isToolCallInProgress = true;
+        try {
+          const args = JSON.parse(pendingToolCall.args);
+          const toolResult = await searchBrave(args.query);
+
+          messages.push({
+            role: 'tool',
+            content: toolResult,
+            tool_call_id: pendingToolCall.id
+          });
+
+          // Continue the conversation with tool result
+          createChatCompletion({
+            messages,
+            model,
+            apiKey,
+            baseURL,
+            onData,
+            onError,
+            onToolCall
+          });
+        } catch (error: any) {
+          onError(`Tool call failed: ${error.message}`);
+        } finally {
+          isToolCallInProgress = false;
+        }
+        return;
+      }
+
       if (xhr.status >= 400) {
+
         console.error('API Error Response:', xhr.responseText);
         const errorData = JSON.parse(xhr.responseText);
         onError(errorData.error?.message || `API Error: ${xhr.status}`);
@@ -113,7 +186,7 @@ const openaiHandlers = {
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' }, 
+        { role: 'system', content: 'You are a helpful assistant.' },
         ...messages.map(msg => {
           // If there are no images, return a simple message object
           if (!msg.images || msg.images.length === 0) {
@@ -122,7 +195,7 @@ const openaiHandlers = {
               content: msg.content
             };
           }
-          
+
           // If there are images, construct the content array format
           return {
             role: msg.role,
@@ -143,7 +216,8 @@ const openaiHandlers = {
   }),
 
 
-  handleStreamData: (line, onData) => {
+  handleStreamData: (line, onData, onToolCall) => {
+
     if (line.startsWith('data: ')) {
       const data = line.substring(6).trim();
       if (data === '[DONE]') {
@@ -154,8 +228,29 @@ const openaiHandlers = {
       try {
         const parsed = JSON.parse(data);
         // console.debug('OpenAI stream data:', parsed);
+        // Handle tool call deltas
+        const toolCall = parsed.choices[0]?.delta?.tool_calls?.[0];
+        if (toolCall?.function?.arguments) {
+          if (toolCall.id && !pendingToolCall) {
+            pendingToolCall = {
+              id: toolCall.id,
+              name: toolCall.function.name,
+              args: toolCall.function.arguments
+            };
+          } else if (pendingToolCall) {
+            pendingToolCall.args += toolCall.function.arguments;
+          }
+        }
+
+
         const deltaContent = parsed.choices[0]?.delta?.content;
         if (deltaContent) onData(deltaContent);
+
+        // Finalize tool call if needed
+        if (parsed.choices[0]?.finish_reason === 'tool_calls' && pendingToolCall) {
+          onToolCall?.(pendingToolCall);
+        }
+
       } catch (e) {
         console.error('Error parsing OpenAI stream data:', e, 'Data:', data);
       }
@@ -197,7 +292,8 @@ const anthropicHandlers = {
     })
   }),
 
-  handleStreamData: (line, onData) => {
+  handleStreamData: (line, onData, onToolCall) => {
+
     if (line.startsWith('data: ')) {
       const data = line.substring(6).trim();
       try {

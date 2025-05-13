@@ -13,6 +13,8 @@ export default function SettingsScreen() {
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
   const [deepseekApiKey, setDeepseekApiKey] = useState('');
+  const [braveApiKey, setBraveApiKey] = useState('');
+
   const theme = useColorScheme() ?? 'light';
 
   useEffect(() => {
@@ -22,11 +24,14 @@ export default function SettingsScreen() {
         AsyncStorage.getItem('gemini-api-key'),
         AsyncStorage.getItem('anthropic-api-key'),
         AsyncStorage.getItem('deepseek-api-key'),
+        AsyncStorage.getItem('brave-api-key'),
       ]);
       if (openai) setOpenaiApiKey(openai);
       if (gemini) setGeminiApiKey(gemini);
       if (anthropic) setAnthropicApiKey(anthropic);
       if (deepseek) setDeepseekApiKey(deepseek);
+      if (brave) setBraveApiKey(brave);
+
     };
     loadApiKeys();
   }, []);
@@ -206,8 +211,46 @@ export default function SettingsScreen() {
         />
       </TouchableOpacity>
 
+      {/* Brave Search API Key */}
+      <ThemedText type="defaultSemiBold" style={styles.label}>
+        Brave Search API Key:
+      </ThemedText>
+      <TextInput
+        style={[
+          styles.input,
+          {
+            color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+            backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+            borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
+          }
+        ]}
+        value={braveApiKey}
+        onChangeText={setBraveApiKey}
+        placeholder="Enter your Brave Search API key"
+        placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+        secureTextEntry
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+      <TouchableOpacity
+        style={[
+          styles.saveButton,
+          { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+        ]}
+        onPress={() => handleSave('brave-api-key', braveApiKey)}
+      >
+        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Brave Key</ThemedText>
+        <IconSymbol
+          name="paperplane.fill"
+          size={20}
+          color="white"
+          style={styles.buttonIcon}
+        />
+      </TouchableOpacity>
+
       <ThemedText type="subtitle" style={styles.note}>
-        Your API keys are stored securely on your device and never sent anywhere except directly to their respective APIs (OpenAI, Gemini, Anthropic, DeepSeek).
+        Your API keys are stored securely on your device and never sent anywhere except directly to their respective APIs (OpenAI, Gemini, Anthropic, DeepSeek, Brave).
+
 
       </ThemedText>
       </ScrollView>
