@@ -84,7 +84,6 @@ export async function createChatCompletion({
 
     const xhr = new XMLHttpRequest();
     const { endpoint, headers, body } = providerHandlers.getRequestConfig({
-
       model,
       messages,
       baseURL,
@@ -108,7 +107,7 @@ export async function createChatCompletion({
 
         const lines = chunk.split('\n');
         for (const line of lines) {
-          providerHandlers.handleStreamData(line, onData, (toolCall) => {
+          providerHandlers.handleStreamData(line, onData, pendingToolCall, (toolCall) => {
             pendingToolCall = toolCall;
           });
 
@@ -118,7 +117,9 @@ export async function createChatCompletion({
 
     xhr.onload = async () => {
       console.debug('Request completed with status:', xhr.status);
+      console.log(JSON.stringify(pendingToolCall))
 
+      console.log(onToolCall)
       if (pendingToolCall && onToolCall) {
         isToolCallInProgress = true;
         try {
@@ -223,7 +224,7 @@ const openaiHandlers = {
 
 
 
-  handleStreamData: (line, onData, onToolCall) => {
+  handleStreamData: (line, onData, pendingToolCall, onToolCall) => {
 
     if (line.startsWith('data: ')) {
       const data = line.substring(6).trim();
@@ -234,35 +235,43 @@ const openaiHandlers = {
 
       try {
         const parsed = JSON.parse(data);
-        // console.debug('OpenAI stream data:', parsed);
-        // Handle tool call deltas
         const toolCall = parsed.choices[0]?.delta?.tool_calls?.[0];
-        if (toolCall?.function?.arguments) {
+
+        console.log('toolCall')
+        console.log(toolCall)
+        console.log('pendingToolCall')
+        console.log(pendingToolCall)
+        if (toolCall?.function) {
+          console.debug(JSON.stringify(toolCall))
           if (toolCall.id && !pendingToolCall) {
+            console.debug('creating pending toolcall')
             pendingToolCall = {
               id: toolCall.id,
               name: toolCall.function.name,
               args: toolCall.function.arguments
             };
+            onToolCall?.(pendingToolCall);
           } else if (pendingToolCall) {
+            console.debug('updateding pending toolcall')
             pendingToolCall.args += toolCall.function.arguments;
           }
         }
-
+        // else if (toolCall === undefined && pendingToolCall) {
+        //   console.log('calling on toolcall callback')
+        //   // onToolCall?.(pendingToolCall);
+        //   // pendingToolCall = null;
+        // }
 
         const deltaContent = parsed.choices[0]?.delta?.content;
         if (deltaContent) onData(deltaContent);
 
-        // Finalize tool call if needed
-        if (parsed.choices[0]?.finish_reason === 'tool_calls' && pendingToolCall) {
-          onToolCall?.(pendingToolCall);
-        }
 
       } catch (e) {
         console.error('Error parsing OpenAI stream data:', e, 'Data:', data);
       }
     }
   }
+
 };
 
 // Anthropic-specific handlers
