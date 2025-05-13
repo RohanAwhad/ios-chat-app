@@ -1,28 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  images?: Array<{
-    uri: string;
-    base64?: string;
-    mimeType: string;
-  }>;
-};
+import { MODELS } from '@/constants/Models';
 
 
 type ChatCompletionOptions = {
-  messages: Array<{
+  messages: {
     role: 'user' | 'assistant' | 'tool';
     content: string;
-    images?: Array<{
+    images?: {
       uri: string;
       base64?: string;
       mimeType: string;
-    }>;
+    }[];
     tool_call_id?: string;
-  }>;
+  }[];
 
 
   model: string;
@@ -180,43 +171,56 @@ export async function createChatCompletion({
 
 // OpenAI-specific handlers
 const openaiHandlers = {
-  getRequestConfig: ({ model, messages, baseURL, apiKey }) => ({
-    endpoint: `${baseURL}/chat/completions`,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        ...messages.map(msg => {
-          // If there are no images, return a simple message object
-          if (!msg.images || msg.images.length === 0) {
+  getRequestConfig: ({ model, messages, baseURL, apiKey }) => {
+    const modelConfig = Object.values(MODELS).find(m => m.name === model);
+    return {
+
+      endpoint: `${baseURL}/chat/completions`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          ...messages.map(msg => {
+            // If there are no images, return a simple message object
+            if (!msg.images || msg.images.length === 0) {
+              return {
+                role: msg.role,
+                content: msg.content
+              };
+            }
+
+            // If there are images, construct the content array format
             return {
               role: msg.role,
-              content: msg.content
+              content: [
+                { type: 'text', text: msg.content },
+                ...msg.images.map(img => ({
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${img.mimeType};base64,${img.base64}`
+                  }
+                }))
+              ]
             };
+          })
+        ],
+        stream: true,
+        tools: modelConfig?.tools?.map(tool => ({
+          type: "function",
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema
           }
+        }))
+      })
+    }
+  },
 
-          // If there are images, construct the content array format
-          return {
-            role: msg.role,
-            content: [
-              { type: 'text', text: msg.content },
-              ...msg.images.map(img => ({
-                type: 'image_url',
-                image_url: {
-                  url: `data:${img.mimeType};base64,${img.base64}`
-                }
-              }))
-            ]
-          };
-        })
-      ],
-      stream: true
-    })
-  }),
 
 
   handleStreamData: (line, onData, onToolCall) => {
@@ -263,37 +267,43 @@ const openaiHandlers = {
 
 // Anthropic-specific handlers
 const anthropicHandlers = {
-  getRequestConfig: ({ model, messages, baseURL, apiKey }) => ({
-    endpoint: `${baseURL}/messages`,
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-      'x-api-key': apiKey
-    },
-    body: JSON.stringify({
-      model,
-      messages: messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        ...(msg.images && msg.images.length > 0 && {
-          content: [
-            { type: 'text', text: msg.content },
-            ...msg.images.map(img => ({
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: img.mimeType,
-                data: img.base64
-              }
-            }))
-          ]
-        })
-      })),
+  getRequestConfig: ({ model, messages, baseURL, apiKey }) => {
+    const modelConfig = Object.values(MODELS).find(m => m.name === model);
+    return {
 
-      max_tokens: 1024,
-      stream: true
-    })
-  }),
+      endpoint: `${baseURL}/messages`,
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': apiKey
+      },
+      body: JSON.stringify({
+        model,
+        messages: messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          ...(msg.images && msg.images.length > 0 && {
+            content: [
+              { type: 'text', text: msg.content },
+              ...msg.images.map(img => ({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: img.mimeType,
+                  data: img.base64
+                }
+              }))
+            ]
+          })
+        })),
+
+        max_tokens: 1024,
+        stream: true,
+        tools: modelConfig?.tools
+      })
+    }
+  },
+
 
   handleStreamData: (line, onData, onToolCall) => {
 
