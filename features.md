@@ -5,6 +5,8 @@
 - [ ] 003_Regenerate Reply Option
 - [ ] 004_Copy any message
 - [ ] 005_Edit any message
+- [ ] 006_Delete any message
+- [ ] 007_View Sent Images
 
 This is basically list of high level feature prompts that i am using to guide ai to add new features. I plan on getting better and I am recording here, so i can come back and study this.
 
@@ -43,3 +45,9 @@ This is how i am envisioning it:
 ### 004_Copy any message
 
 ### 005_Edit any message
+
+### 006_Delete any message
+
+### 007_View Sent images
+
+Problem Definition: I need a view where i can press on the images i already sent which will show me image in full screen mode, and I can swipe left-right to go back or forward if multiple images.
