@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import * as Clipboard from 'expo-clipboard';
+
 import * as FileSystem from 'expo-file-system';
 import { convertImageToBase64, copyImageToAppDirectory } from '@/utils/imageUtils';
 
@@ -36,6 +38,8 @@ export default function ChatScreen() {
   const params = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
 
   // Load or initialize chat
   useEffect(() => {
@@ -196,7 +200,23 @@ export default function ChatScreen() {
     }
   };
 
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    if (!content.trim()) {
+      Alert.alert('No text to copy');
+      return;
+    }
+    
+    try {
+      await Clipboard.setStringAsync(content);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (error) {
+      Alert.alert('Copy failed', 'Could not copy message');
+    }
+  };
+
   const handleSend = async () => {
+
     if (!inputText.trim() && selectedImages.length === 0) return;
 
     // Process images first
@@ -353,7 +373,25 @@ export default function ChatScreen() {
               >
                 {message.content}
               </ThemedText>
+              <TouchableOpacity
+                onPress={() => {
+                  handleCopyMessage(message.id, message.content);
+                }}
+                style={[
+                  styles.copyButton,
+                  message.role === 'user'
+                    ? styles.userCopyButton
+                    : styles.assistantCopyButton
+                ]}
+              >
+                <IconSymbol
+                  name={copiedMessageId === message.id ? 'checkmark' : 'doc.on.doc'}
+                  size={16}
+                  color={theme === 'light' ? Colors.light.text : Colors.dark.text}
+                />
+              </TouchableOpacity>
               {message.images && message.images.length > 0 && (
+
                 <View style={styles.messageImagesContainer}>
                   {message.images.slice(0, 2).map((img, index) => (
                     <Image
@@ -461,6 +499,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  copyButton: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  userCopyButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  assistantCopyButton: {
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+
 
 
   previewContainer: {

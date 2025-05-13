@@ -23,7 +23,8 @@ const MAPPING = {
   'clock': 'access-time',
   'paperclip': 'attach-file',
   'xmark': 'close',
-
+  'doc.on.doc': 'content-copy',
+  'checkmark': 'check',
 
 } as IconMapping;
 
