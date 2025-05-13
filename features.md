@@ -3,7 +3,7 @@
 - [x] 001_History Page
 - [x] 002_Upload Image
 - [ ] 003_Regenerate Reply Option
-- [ ] 004_Copy any message
+- [x] 004_Copy any message
 - [ ] 005_Edit any message
 - [ ] 006_Delete any message
 - [ ] 007_View Sent Images
@@ -61,3 +61,250 @@ User Story:
 ### 007_View Sent images
 
 Problem Definition: I need a view where i can press on the images i already sent which will show me image in full screen mode, and I can swipe left-right to go back or forward if multiple images.
+
+### 008_Web Search
+
+Problem Defintion: I need a tool for the model to be able to use web search because i need it
+
+User Story for performing websearch:
+  - I ask the model a question using normal messages
+  - Model decides to perform a tool call action (web search) with the a query
+  - The web search function takes in the query, calls to an api and then returns the result back to the model for answer generation.
+
+User Story for adding the websearch api key.:
+  - I will open up settings page.
+  - At the bottom, there will be a separator and a title saying Brave Search API Key
+  - It will also have an input box, thats where user will paste their api key. Following the same style 
+
+This is how i have the tool call in my python scripts:
+
+```python
+# ===
+# Brave Search tool
+# ===
+@dataclasses.dataclass
+class SearchResult:
+    """
+  Dataclass to represent the search results from Brave Search API.
+
+  :param title: The title of the search result.
+  :param url: The URL of the search result.
+  :param description: A brief description of the search result.
+  :param extra_snippets: Additional snippets related to the search result.
+  :param markdown: A pruned and filtered markdown of the webpage (may not contain all the details).
+  """
+    title: str
+    url: str
+    description: str
+    extra_snippets: list
+    markdown: str
+
+    def __str__(self) -> str:
+        """
+    Returns a string representation of the search result.
+
+    :return: A string representation of the search result.
+    """
+        return (f"Title: {self.title}\n"
+                f"URL: {self.url}\n"
+                f"Description: {self.description}\n"
+                f"Extra Snippets: {', '.join(self.extra_snippets)}\n"
+                f"Markdown: {self.markdown}")
+
+
+def search_brave(query: str, count: int = 5) -> list[SearchResult]:
+    """
+  Searches the web using Brave Search API and returns structured search results.
+
+  :param query: The search query string.
+  :param count: The number of search results to return.
+  :return: A list of SearchResult objects containing the search results.
+  """
+    if not query:
+        return []
+
+    url: str = "https://api.search.brave.com/res/v1/web/search"
+    headers: dict = {
+        "Accept": "application/json",
+        "X-Subscription-Token": os.environ.get('BRAVE_SEARCH_AI_API_KEY', '')
+    }
+    if not headers['X-Subscription-Token']:
+        logger.error("Error: Missing Brave Search API key.")
+        return []
+
+    params: dict = {"q": query, "count": count}
+
+    retries: int = 0
+    max_retries: int = 3
+    backoff_factor: int = 2
+
+    while retries < max_retries:
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            results_json: dict = response.json()
+            logger.debug('Got results')
+            break
+        except requests.exceptions.RequestException as e:
+            logger.exception(f"HTTP Request failed: {e}, retrying...")
+            retries += 1
+            if retries < max_retries:
+                time.sleep(backoff_factor**retries)
+            else:
+                return []
+
+    async def fetch_all_markdown(urls):
+        tasks = [fetch_markdown(url) for url in urls]
+        return await asyncio.gather(*tasks)
+
+    urls = [
+        item.get('url', '')
+        for item in results_json.get('web', {}).get('results', [])
+    ]
+    markdowns = asyncio.run(fetch_all_markdown(urls))
+
+    results: List[SearchResult] = []
+    for item, md in zip(
+            results_json.get('web', {}).get('results', []), markdowns):
+        if md is None:
+            md = 'Failed to get markdown.'
+        result = SearchResult(title=item.get('title', ''),
+                              url=item.get('url', ''),
+                              description=item.get('description', ''),
+                              extra_snippets=item.get('extra_snippets', []),
+                              markdown=md)
+        results.append(result)
+    return results
+
+
+brave_search_tools = [{
+    "type": "function",
+    "function": {
+        "name": "search_brave",
+        "description":
+        "Search the web using Brave Search API and returns structured search results.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "the search query string."
+                },
+            },
+            "required": ["query"]
+        }
+    }
+}]
+```
+
+Use this as reference
+
+
+For openai curl reference
+
+Request Example:
+```bash
+curl https://api.openai.com/v1/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer $OPENAI_API_KEY" \
+-d '{
+    "model": "gpt-4.1",
+    "messages": [
+        {
+            "role": "user",
+            "content": "What is the weather like in Paris today?"
+        }
+    ],
+    "tools": [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get current temperature for a given location.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "City and country e.g. Bogotá, Colombia"
+                        }
+                    },
+                    "required": [
+                        "location"
+                    ],
+                    "additionalProperties": false
+                },
+                "strict": true
+            }
+        }
+    ]
+}'
+```
+
+Response Example:
+```
+[{
+    "id": "call_12345xyz",
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "arguments": "{\"location\":\"Paris, France\"}"
+    }
+}]
+```
+
+For Anthropic:
+Request Example
+```bash
+curl https://api.anthropic.com/v1/messages \
+     --header "x-api-key: $ANTHROPIC_API_KEY" \
+     --header "anthropic-version: 2023-06-01" \
+     --header "content-type: application/json" \
+     --data \
+'{
+    "model": "claude-3-7-sonnet-20250219",
+    "max_tokens": 1024,
+    "tools": [{
+        "name": "get_weather",
+        "description": "Get the current weather in a given location",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city and state, e.g. San Francisco, CA"
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["celsius", "fahrenheit"],
+                    "description": "The unit of temperature, either \"celsius\" or \"fahrenheit\""
+                }
+            },
+            "required": ["location"]
+        }
+    }],
+    "messages": [{"role": "user", "content": "What is the weather like in San Francisco?"}]
+}'
+```
+
+Respponse Example:
+```
+{
+  "id": "msg_01Aq9w938a90dw8q",
+  "model": "claude-3-7-sonnet-20250219",
+  "stop_reason": "tool_use",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "<thinking>I need to call the get_weather function, and the user wants SF, which is likely San Francisco, CA.</thinking>"
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_01A09q90qw90lq917835lq9",
+      "name": "get_weather",
+      "input": {"location": "San Francisco, CA", "unit": "celsius"}
+    }
+  ]
+}
+```
