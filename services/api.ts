@@ -126,33 +126,35 @@ export async function createChatCompletion({
         isToolCallInProgress = true;
 
         try {
-          // Parse the arguments
           const args = JSON.parse(pendingToolCall.args);
           const toolResult = await searchBrave(args.query);
 
-          // Create updated messages with assistant's tool call and tool result
+          // Anthropic requires different message format for tool responses
           const updatedMessages = [
             ...messages,
             {
               role: 'assistant',
-              content: null,
-              tool_calls: [
+              content: [
                 {
+                  type: 'tool_use',
                   id: pendingToolCall.id,
-                  type: 'function',
-                  function: {
-                    name: pendingToolCall.name,
-                    arguments: pendingToolCall.args
-                  }
+                  name: pendingToolCall.name,
+                  input: args
                 }
               ]
             },
             {
-              role: 'tool',
-              content: toolResult,
-              tool_call_id: pendingToolCall.id
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: pendingToolCall.id,
+                  content: toolResult
+                }
+              ]
             }
           ];
+
           console.log('updated messages')
           console.log(updatedMessages)
 
@@ -377,22 +379,33 @@ const anthropicHandlers = {
   },
 
 
-  handleStreamData: (line, onData, onToolCall) => {
-
+  handleStreamData: (line, onData, pendingToolCall, onToolCall) => {
     if (line.startsWith('data: ')) {
       const data = line.substring(6).trim();
       try {
         const parsed = JSON.parse(data);
-        // console.debug('Anthropic stream data:', parsed);
-        if (parsed.type === 'content_block_delta') {
-          const deltaContent = parsed.delta?.text;
-          if (deltaContent) onData(deltaContent);
+        
+        if (parsed.type === 'content_block_start' && parsed.content_block.type === 'tool_use') {
+          const newToolCall = {
+            id: parsed.content_block.id,
+            name: parsed.content_block.name,
+            args: ''
+          };
+          onToolCall(newToolCall);
+        } else if (parsed.type === 'content_block_delta') {
+          if (parsed.delta.type === 'input_json_delta' && pendingToolCall) {
+            pendingToolCall.args += parsed.delta.partial_json;
+          } else if (parsed.delta.type === 'text_delta') {
+            const deltaContent = parsed.delta.text;
+            if (deltaContent) onData(deltaContent);
+          }
         }
       } catch (e) {
         console.error('Error parsing Anthropic stream data:', e, 'Data:', data);
       }
     }
   }
+
 };
 
 
