@@ -38,10 +38,11 @@ let isToolCallInProgress = false;
 
 async function searchBrave(query: string): Promise<string> {
   try {
+    console.log(`called searchBrave function with query: ${query}`)
     const apiKey = await AsyncStorage.getItem('brave-api-key');
     if (!apiKey) throw new Error('Missing Brave API key');
 
-    const params = new URLSearchParams({ q: query, count: '3' });
+    const params = new URLSearchParams({ q: query, count: '10' });
     const response = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
       headers: { 'X-Subscription-Token': apiKey }
     });
@@ -49,12 +50,14 @@ async function searchBrave(query: string): Promise<string> {
     if (!response.ok) throw new Error(`Brave API error: ${response.statusText}`);
 
     const data = await response.json();
-    const results = data.web?.results.slice(0, 3).map((r: any) => ({
+    const results = data.web?.results.slice(0, 10).map((r: any) => ({
       title: r.title,
       url: r.url,
       description: r.description
     })) || [];
 
+    console.log('results')
+    console.log(JSON.stringify(results))
     return JSON.stringify(results);
   } catch (error: any) {
     console.error('Brave search failed:', error);
