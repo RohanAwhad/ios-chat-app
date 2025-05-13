@@ -4,7 +4,7 @@ import { convertImageToBase64, copyImageToAppDirectory } from '@/utils/imageUtil
 
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 
-import { Image , StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { Image, View, StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,11 +24,11 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   id: string;
-  images?: Array<{
+  images?: {
     uri: string;
     base64?: string;
     mimeType: string;
-  }>;
+  }[];
 };
 
 
@@ -220,11 +220,11 @@ export default function ChatScreen() {
     );
 
     // Filter out any failed image processing
-    const validImages = processedImages.filter(img => img !== null) as Array<{
+    const validImages = processedImages.filter(img => img !== null) as {
       uri: string;
       base64: string;
       mimeType: string;
-    }>;
+    }[];
 
 
     const currentInputText = inputText;
@@ -258,14 +258,14 @@ export default function ChatScreen() {
     // Prepare messages for the API: current history + new user message.
     // `messages` state here is the history *before* this send action.
     const messagesForApi = [...messages, userMessage].map(msg => ({
-    role: msg.role,
-    content: msg.content,
-    images: msg.images?.map(img => ({
-      uri: img.uri,
-      mimeType: img.mimeType,
-      base64: img.base64
-    }))
-  }));
+      role: msg.role,
+      content: msg.content,
+      images: msg.images?.map(img => ({
+        uri: img.uri,
+        mimeType: img.mimeType,
+        base64: img.base64
+      }))
+    }));
 
 
     // Update UI optimistically with user message and assistant placeholder.
@@ -354,16 +354,24 @@ export default function ChatScreen() {
                 {message.content}
               </ThemedText>
               {message.images && message.images.length > 0 && (
-                <ScrollView horizontal style={styles.messageImages}>
-                  {message.images.map((img, index) => (
+                <View style={styles.messageImagesContainer}>
+                  {message.images.slice(0, 3).map((img, index) => (
                     <Image
                       key={`${img.uri}-${index}`}
                       source={{ uri: img.uri }}
                       style={styles.messageImage}
                     />
                   ))}
-                </ScrollView>
+                  {message.images.length > 3 && (
+                    <View style={styles.moreImagesIndicator}>
+                      <ThemedText style={styles.moreImagesText}>
+                        +{message.images.length - 3}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
               )}
+
 
             </ThemedView>
           ))}
@@ -431,15 +439,29 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  messageImages: {
+  messageImagesContainer: {
+    flexDirection: 'row',
     marginTop: 8,
+    gap: 8,
   },
   messageImage: {
     width: 100,
     height: 100,
     borderRadius: 8,
-    marginRight: 8,
   },
+  moreImagesIndicator: {
+    width: 60,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreImagesText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
 
   previewContainer: {
     maxHeight: 100,
