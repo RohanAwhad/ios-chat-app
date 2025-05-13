@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
+import * as FileSystem from 'expo-file-system';
+import { convertImageToBase64, copyImageToAppDirectory } from '@/utils/imageUtils';
+
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 
+import { Image, View, StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createChatCompletion } from '@/services/api';
 import { MODELS } from '@/constants/Models';
-import { StyleSheet, TextInput, ScrollView, Keyboard, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { getChatHistory, saveChat } from '@/services/chatStorage'; // Import chat storage functions
 
@@ -19,7 +24,13 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   id: string;
+  images?: {
+    uri: string;
+    base64?: string;
+    mimeType: string;
+  }[];
 };
+
 
 export default function ChatScreen() {
   const params = useLocalSearchParams();
@@ -29,11 +40,11 @@ export default function ChatScreen() {
   // Load or initialize chat
   useEffect(() => {
     const initializeChat = async () => {
-      console.log("[ChatScreen InitializeChat] Triggered. Params:", JSON.stringify(params), "CurrentChatID before:", currentChatId);
+      // console.log("[ChatScreen InitializeChat] Triggered. Params:", JSON.stringify(params), "CurrentChatID before:", currentChatId);
 
       if (params.newChat === "true") {
         const newChatId = Date.now().toString();
-        console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
+        // console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
         setCurrentChatId(newChatId);
         setMessages([]);
         router.replace(`/?chatId=${newChatId}&isNew=true`); // Add isNew flag
@@ -42,7 +53,7 @@ export default function ChatScreen() {
 
       if (params.newChat === "true") {
         const newChatId = Date.now().toString();
-        console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
+        // console.log("[ChatScreen InitializeChat] New chat requested. ID:", newChatId);
         setCurrentChatId(newChatId);
         setMessages([]);
         router.replace(`/?chatId=${newChatId}`); // Remove isNew flag
@@ -54,32 +65,32 @@ export default function ChatScreen() {
 
         // If we're already viewing this chat and have messages, don't reload
         if (chatIdFromParam === currentChatId && messages.length > 0) {
-          console.log(`[ChatScreen InitializeChat] Already on chat ${chatIdFromParam}. Current messages: ${messages.length}`);
+          // console.log(`[ChatScreen InitializeChat] Already on chat ${chatIdFromParam}. Current messages: ${messages.length}`);
           return;
         }
 
-        console.log(`[ChatScreen InitializeChat] Loading chat for ID: ${chatIdFromParam}`);
+        // console.log(`[ChatScreen InitializeChat] Loading chat for ID: ${chatIdFromParam}`);
         const history = await getChatHistory();
         const chat = history.find(c => c.id === chatIdFromParam);
 
         if (chat) {
-          console.log("[ChatScreen InitializeChat] Chat found in history. Loading messages:", chat.messages.length);
+          // console.log("[ChatScreen InitializeChat] Chat found in history. Loading messages:", chat.messages.length);
           setCurrentChatId(chat.id);
           setMessages(chat.messages);
         } else {
-          console.log(`[ChatScreen InitializeChat] Chat ${chatIdFromParam} not found in history. Starting new chat with this ID.`);
+          // console.log(`[ChatScreen InitializeChat] Chat ${chatIdFromParam} not found in history. Starting new chat with this ID.`);
           setCurrentChatId(chatIdFromParam);
           setMessages([]);
         }
       } else if (!currentChatId) {
         // No params, and no chat active (e.g., initial app load without specific chat in URL)
         const newChatId = Date.now().toString();
-        console.log("[ChatScreen InitializeChat] No params and no active chat. Creating default new chat. ID:", newChatId);
+        // console.log("[ChatScreen InitializeChat] No params and no active chat. Creating default new chat. ID:", newChatId);
         setCurrentChatId(newChatId);
         setMessages([]);
         router.replace(`/?chatId=${newChatId}`);
       } else {
-        console.log(`[ChatScreen InitializeChat] No relevant params, but chat ${currentChatId} is active. Maintaining current state.`);
+        // console.log(`[ChatScreen InitializeChat] No relevant params, but chat ${currentChatId} is active. Maintaining current state.`);
       }
 
     };
@@ -110,6 +121,8 @@ export default function ChatScreen() {
 
 
   const [inputText, setInputText] = useState('');
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
 
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useColorScheme() ?? 'light';
@@ -127,8 +140,92 @@ export default function ChatScreen() {
   });
 
 
+  const handleAttachImage = async () => {
+    Alert.alert(
+      'Add Media',
+      'Choose media source',
+      [
+        {
+          text: 'Camera',
+          onPress: () => takePhoto(),
+        },
+        {
+          text: 'Photos',
+          onPress: () => pickImage(),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets) {
+      setSelectedImages(prev => [...prev, ...result.assets.map(a => a.uri)]);
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 30,
+      orderedSelection: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets) {
+      const newUris = result.assets.map(a => a.uri);
+      if (selectedImages.length + newUris.length > 30) {
+        Alert.alert('Maximum 30 images allowed');
+        return;
+      }
+      setSelectedImages(prev => [...prev, ...newUris]);
+    }
+  };
+
   const handleSend = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && selectedImages.length === 0) return;
+
+    // Process images first
+    const processedImages = await Promise.all(
+      selectedImages.map(async (uri) => {
+        try {
+          // Copy image to app directory for permanent storage
+          const newUri = await copyImageToAppDirectory(uri);
+          // Convert to base64 for API payload
+          const { base64, mimeType } = await convertImageToBase64(newUri);
+          return {
+            uri: newUri,
+            base64,
+            mimeType
+          };
+        } catch (error) {
+          console.error('Error processing image:', error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out any failed image processing
+    const validImages = processedImages.filter(img => img !== null) as {
+      uri: string;
+      base64: string;
+      mimeType: string;
+    }[];
+
 
     const currentInputText = inputText;
     setInputText('');
@@ -139,7 +236,9 @@ export default function ChatScreen() {
       role: 'user',
       content: currentInputText,
       id: timestamp,
+      images: validImages,
     };
+
 
     const modelConfig = MODELS[selectedModel];
     const apiKey = await AsyncStorage.getItem(modelConfig.apiKeyName);
@@ -161,7 +260,13 @@ export default function ChatScreen() {
     const messagesForApi = [...messages, userMessage].map(msg => ({
       role: msg.role,
       content: msg.content,
+      images: msg.images?.map(img => ({
+        uri: img.uri,
+        mimeType: img.mimeType,
+        base64: img.base64
+      }))
     }));
+
 
     // Update UI optimistically with user message and assistant placeholder.
     // Functional update ensures we use the latest `prevMessages` state.
@@ -242,23 +347,67 @@ export default function ChatScreen() {
                 style={[
                   styles.messageText,
                   message.role === 'user'
-                    ? { color: theme === 'light' ? Colors.dark.text : Colors.light.text } // User text color based on bubble
-                    : { color: theme === 'light' ? Colors.dark.text : Colors.light.text }  // Assistant text color (can be different)
+                    ? { color: theme === 'light' ? Colors.dark.text : Colors.light.text }
+                    : { color: theme === 'light' ? Colors.dark.text : Colors.light.text }
                 ]}
               >
                 {message.content}
               </ThemedText>
+              {message.images && message.images.length > 0 && (
+                <View style={styles.messageImagesContainer}>
+                  {message.images.slice(0, 2).map((img, index) => (
+                    <Image
+                      key={`${img.uri}-${index}`}
+                      source={{ uri: img.uri }}
+                      style={styles.messageImage}
+                    />
+                  ))}
+                  {message.images.length > 2 && (
+                    <View style={styles.moreImagesIndicator}>
+                      <ThemedText style={styles.moreImagesText}>
+                        +{message.images.length - 2}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
+
+
             </ThemedView>
           ))}
         </ScrollView>
 
-        <ThemedView
-          style={[
-            styles.inputContainer,
-            { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
-          ]}
-        >
+        {selectedImages.length > 0 && (
+          <ScrollView
+            horizontal
+            style={styles.previewContainer}
+            contentContainerStyle={styles.previewContent}
+          >
+            {selectedImages.map((uri, index) => (
+              <ThemedView key={uri} style={styles.imagePreview}>
+                <Image source={{ uri }} style={styles.previewImage} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => setSelectedImages(prev => prev.filter((_, i) => i !== index))}
+                >
+                  <IconSymbol name="xmark" size={16} color={Colors[theme].text} />
+                </TouchableOpacity>
+              </ThemedView>
+            ))}
+          </ScrollView>
+        )}
+        <ThemedView style={[
+          styles.inputContainer,
+          { borderTopColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon }
+        ]}>
+          <TouchableOpacity
+            onPress={handleAttachImage}
+            style={styles.attachButton}
+          >
+            <IconSymbol name="paperclip" size={24} color={Colors[theme].tint} />
+          </TouchableOpacity>
           <TextInput
+
             style={[
               styles.input,
               {
@@ -290,6 +439,60 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  messageImagesContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 8,
+  },
+  messageImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  moreImagesIndicator: {
+    width: 60,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreImagesText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+
+  previewContainer: {
+    maxHeight: 100,
+    paddingVertical: 8,
+  },
+  previewContent: {
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  attachButton: {
+    padding: 8,
+  },
+
   container: {
     flex: 1,
   },

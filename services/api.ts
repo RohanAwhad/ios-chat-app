@@ -4,10 +4,25 @@ import { Alert } from 'react-native';
 type Message = {
   role: 'user' | 'assistant';
   content: string;
+  images?: Array<{
+    uri: string;
+    base64?: string;
+    mimeType: string;
+  }>;
 };
 
+
 type ChatCompletionOptions = {
-  messages: Message[];
+  messages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    images?: Array<{
+      uri: string;
+      base64?: string;
+      mimeType: string;
+    }>;
+  }>;
+
   model: string;
   apiKey?: string;
   baseURL?: string;
@@ -45,7 +60,7 @@ export async function createChatCompletion({
       apiKey: finalApiKey
     });
 
-    console.debug('API Request Config:', { endpoint, headers, body: JSON.parse(body) });
+    // console.debug('API Request Config:', { endpoint, headers, body: JSON.parse(body) });
 
     xhr.open('POST', endpoint);
     Object.entries(headers).forEach(([key, value]) => {
@@ -57,7 +72,7 @@ export async function createChatCompletion({
       if (xhr.readyState === 3) {
         const chunk = xhr.responseText.substring(buffer.length);
         buffer += chunk;
-        console.debug('Received chunk:', chunk);
+        // console.debug('Received chunk:', chunk);
 
         const lines = chunk.split('\n');
         for (const line of lines) {
@@ -97,10 +112,36 @@ const openaiHandlers = {
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: 'system', content: 'You are a helpful assistant.' }, ...messages],
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' }, 
+        ...messages.map(msg => {
+          // If there are no images, return a simple message object
+          if (!msg.images || msg.images.length === 0) {
+            return {
+              role: msg.role,
+              content: msg.content
+            };
+          }
+          
+          // If there are images, construct the content array format
+          return {
+            role: msg.role,
+            content: [
+              { type: 'text', text: msg.content },
+              ...msg.images.map(img => ({
+                type: 'image_url',
+                image_url: {
+                  url: `data:${img.mimeType};base64,${img.base64}`
+                }
+              }))
+            ]
+          };
+        })
+      ],
       stream: true
     })
   }),
+
 
   handleStreamData: (line, onData) => {
     if (line.startsWith('data: ')) {
@@ -112,7 +153,7 @@ const openaiHandlers = {
 
       try {
         const parsed = JSON.parse(data);
-        console.debug('OpenAI stream data:', parsed);
+        // console.debug('OpenAI stream data:', parsed);
         const deltaContent = parsed.choices[0]?.delta?.content;
         if (deltaContent) onData(deltaContent);
       } catch (e) {
@@ -133,7 +174,24 @@ const anthropicHandlers = {
     },
     body: JSON.stringify({
       model,
-      messages,
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        ...(msg.images && msg.images.length > 0 && {
+          content: [
+            { type: 'text', text: msg.content },
+            ...msg.images.map(img => ({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: img.mimeType,
+                data: img.base64
+              }
+            }))
+          ]
+        })
+      })),
+
       max_tokens: 1024,
       stream: true
     })
@@ -144,7 +202,7 @@ const anthropicHandlers = {
       const data = line.substring(6).trim();
       try {
         const parsed = JSON.parse(data);
-        console.debug('Anthropic stream data:', parsed);
+        // console.debug('Anthropic stream data:', parsed);
         if (parsed.type === 'content_block_delta') {
           const deltaContent = parsed.delta?.text;
           if (deltaContent) onData(deltaContent);

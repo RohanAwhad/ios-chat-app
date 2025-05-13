@@ -104,7 +104,7 @@ export default function Layout() {
                   onPress={async () => {
                     if (!params.chatId) {
                       // If we're not in a chat yet, we're already at the home screen
-                      console.log("Already on home screen - not creating a new one");
+                      // console.log("Already on home screen - not creating a new one");
                       return;
                     }
 
@@ -113,10 +113,10 @@ export default function Layout() {
 
                     // Create a new chat only if current chat has messages
                     if (currentChat && currentChat.messages.length > 0) {
-                      console.log("Creating new chat from existing chat with messages");
+                      // console.log("Creating new chat from existing chat with messages");
                       router.replace(`/?newChat=true`);
                     } else {
-                      console.log("Current chat is empty or doesn't exist - not creating a new one");
+                      // console.log("Current chat is empty or doesn't exist - not creating a new one");
                     }
                   }}
                   style={{ marginLeft: 16 }}

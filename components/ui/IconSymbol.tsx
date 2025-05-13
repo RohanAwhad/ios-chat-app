@@ -21,6 +21,9 @@ const MAPPING = {
   'gearshape.fill': 'settings',
   'plus': 'add',
   'clock': 'access-time',
+  'paperclip': 'attach-file',
+  'xmark': 'close',
+
 
 } as IconMapping;
 
