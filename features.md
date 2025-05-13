@@ -1,12 +1,15 @@
 # Feature List
 
 - [x] 001_History Page
-- [ ] 002_Upload Image
+- [x] 002_Upload Image
 - [ ] 003_Regenerate Reply Option
 - [ ] 004_Copy any message
 - [ ] 005_Edit any message
 - [ ] 006_Delete any message
 - [ ] 007_View Sent Images
+- [ ] 008_Perform Web Search
+- [ ] 009_Upload PDFs
+- [ ] 010_Voice Mode
 
 This is basically list of high level feature prompts that i am using to guide ai to add new features. I plan on getting better and I am recording here, so i can come back and study this.
 
@@ -43,6 +46,13 @@ This is how i am envisioning it:
 ### 003_Regenerate Reply Option
 
 ### 004_Copy any message
+
+Problem Defintion: I need a button to copy any message present in the conversation thread, because i want to
+
+User Story:
+  - User sends a message, or receives one from an ai
+  - Beneath the message bubble, there is copy icon
+
 
 ### 005_Edit any message
 
