@@ -205,7 +205,7 @@ export default function ChatScreen() {
       Alert.alert('No text to copy');
       return;
     }
-    
+
     try {
       await Clipboard.setStringAsync(content);
       setCopiedMessageId(messageId);
@@ -338,7 +338,8 @@ export default function ChatScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, {backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background}]}>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.select({ ios: 90, android: 100 })}
@@ -356,11 +357,19 @@ export default function ChatScreen() {
               style={[
                 styles.messageBubble,
                 message.role === 'user'
-                  ? { ...styles.userBubble, backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-                  : { ...styles.assistantBubble, backgroundColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon },
-                message.role === 'user'
-                  ? { alignSelf: 'flex-end' }
-                  : { alignSelf: 'flex-start' }
+                  ? {
+                    ...styles.userBubble,
+                    backgroundColor: theme === 'light' ? Colors.light.userBubble : Colors.dark.userBubble,
+                    alignSelf: 'flex-end',
+                    borderWidth: 0,
+                  }
+                  : {
+                    ...styles.assistantBubble,
+                    backgroundColor: theme === 'light' ? Colors.light.aiBubble : Colors.dark.aiBubble,
+                    alignSelf: 'flex-start',
+                    borderWidth: 1,
+                    borderColor: theme === 'light' ? Colors.light.border : Colors.dark.border,
+                  }
               ]}
             >
               <ThemedText
@@ -445,12 +454,12 @@ export default function ChatScreen() {
             <IconSymbol name="paperclip" size={24} color={Colors[theme].tint} />
           </TouchableOpacity>
           <TextInput
-
             style={[
               styles.input,
               {
                 color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-                backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+                backgroundColor: theme === 'light' ? Colors.light.surface : Colors.dark.surface,
+                borderColor: theme === 'light' ? Colors.light.border : Colors.dark.border,
               }
             ]}
             value={inputText}
@@ -459,6 +468,7 @@ export default function ChatScreen() {
             placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
             multiline
           />
+
           <TouchableOpacity
             onPress={handleSend}
             disabled={!inputText.trim()}
@@ -551,6 +561,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+
   keyboardAvoid: {
     flex: 1,
   },
@@ -561,50 +573,74 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   messageBubble: {
-    maxWidth: '85%', // Slightly increased max width
-    paddingHorizontal: 14, // Adjusted padding
-    paddingVertical: 10,  // Adjusted padding
-    borderRadius: 18,    // More rounded bubbles
-    minWidth: '10%',     // Ensure very short messages still have some width
+    maxWidth: '85%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minWidth: '10%',
   },
   userBubble: {
-    // alignSelf will be set dynamically
+    borderTopRightRadius: 4,   // Asymmetrical corners
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
   },
   assistantBubble: {
-    // alignSelf will be set dynamically
+    borderTopRightRadius: 18,  // Asymmetrical corners
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
   },
+
   messageText: {
     fontSize: 16,
-    lineHeight: 22, // Added for better readability
-    // color is now set dynamically
+    lineHeight: 24, // Improved line height for readability
+    fontWeight: '400',
+    letterSpacing: 0.3, // Subtle letter spacing for better readability
   },
+
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center', // Align items to center for multiline input
-    gap: 8, // Reduced gap
-    paddingTop: 8,
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 12,
     paddingBottom: 36,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
     // borderTopColor is set dynamically
   },
   input: {
     flex: 1,
-    borderWidth: 1.5, // Slightly thicker border
-    // borderColor is set dynamically in the component
-    borderRadius: 20, // More rounded input
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 12 : 8, // Adjust padding for iOS multiline
-    paddingBottom: Platform.OS === 'ios' ? 12 : 8, // Adjust padding for iOS multiline
-    fontSize: 16, // Ensure input text size matches message text
-    minHeight: 44, // Adjusted min height
+    borderWidth: 1.5,
+    borderRadius: 24, // More rounded input
+    paddingHorizontal: 18,
+    paddingTop: Platform.OS === 'ios' ? 12 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 10,
+    fontSize: 16,
+    minHeight: 50, // Slightly taller input for better visibility
     maxHeight: 120,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
+
   sendButton: {
-    padding: 10, // Slightly larger touch target
+    padding: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    height: 44, // Match minHeight of input
-    width: 44,  // Match minHeight of input
+    height: 50,
+    width: 50,
+    borderRadius: 25,
+    backgroundColor: 'transparent',
   },
+  attachButton: {
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 46,
+    width: 46,
+    borderRadius: 23,
+  },
+
 });

@@ -39,10 +39,11 @@ export default function HistoryScreen() {
             style={[
               styles.chatItem,
               {
-                backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-                borderColor: Colors[theme].icon // Dynamic border color
+                backgroundColor: theme === 'light' ? Colors.light.surface : Colors.dark.surface,
+                borderColor: Colors[theme].border // Better border color
               }
             ]}
+
             onPress={() => {
               // First dismiss the modal, then navigate to the chat
               router.dismiss();
