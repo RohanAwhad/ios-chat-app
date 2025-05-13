@@ -130,15 +130,32 @@ export async function createChatCompletion({
           const args = JSON.parse(pendingToolCall.args);
           const toolResult = await searchBrave(args.query);
 
-          // Create updated messages with tool result
+          // Create updated messages with assistant's tool call and tool result
           const updatedMessages = [
             ...messages,
+            {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: pendingToolCall.id,
+                  type: 'function',
+                  function: {
+                    name: pendingToolCall.name,
+                    arguments: pendingToolCall.args
+                  }
+                }
+              ]
+            },
             {
               role: 'tool',
               content: toolResult,
               tool_call_id: pendingToolCall.id
             }
           ];
+          console.log('updated messages')
+          console.log(updatedMessages)
+
 
           // Make a new request with the tool result
           const followUpXhr = new XMLHttpRequest();
@@ -148,6 +165,8 @@ export async function createChatCompletion({
             baseURL,
             apiKey: finalApiKey
           });
+          console.log('follow up request body')
+          console.log(body)
 
           followUpXhr.open('POST', endpoint);
           Object.entries(headers).forEach(([key, value]) => {
@@ -175,6 +194,7 @@ export async function createChatCompletion({
               onError(`Follow-up API error: ${followUpXhr.status}`);
             }
             isToolCallInProgress = false;
+            console.log('request complete')
           };
 
 
@@ -225,7 +245,10 @@ const openaiHandlers = {
             // Create base message with tool_call_id if present
             const baseMsg = {
               role: msg.role,
-              ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id })
+              ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id }),
+              ...(msg.tool_calls && {
+                tool_calls: msg.tool_calls
+              })
             };
 
             if (!msg.images || msg.images.length === 0) {
@@ -340,7 +363,10 @@ const anthropicHandlers = {
                 }
               }))
             ]
-          })
+          }),
+          // ...(msg.tool_calls && {
+          //   tool_calls: msg.tool_calls
+          // })
         })),
 
         max_tokens: 1024,
