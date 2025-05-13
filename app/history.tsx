@@ -17,9 +17,9 @@ export default function HistoryScreen() {
   useFocusEffect(
     useCallback(() => {
       const loadHistory = async () => {
-        console.log("[HistoryScreen] Loading chat history");
+        // console.log("[HistoryScreen] Loading chat history");
         const loadedChats = await getChatHistory();
-        console.log(`[HistoryScreen] Loaded ${loadedChats.length} chats`);
+        // console.log(`[HistoryScreen] Loaded ${loadedChats.length} chats`);
         setChats(loadedChats);
       };
       loadHistory();
