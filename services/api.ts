@@ -112,20 +112,36 @@ const openaiHandlers = {
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: 'system', content: 'You are a helpful assistant.' }, ...messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        ...(msg.images && msg.images.length > 0 && {
-          images: msg.images.map(img => ({
-            data: img.base64,
-            mime_type: img.mimeType
-          }))
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' }, 
+        ...messages.map(msg => {
+          // If there are no images, return a simple message object
+          if (!msg.images || msg.images.length === 0) {
+            return {
+              role: msg.role,
+              content: msg.content
+            };
+          }
+          
+          // If there are images, construct the content array format
+          return {
+            role: msg.role,
+            content: [
+              { type: 'text', text: msg.content },
+              ...msg.images.map(img => ({
+                type: 'image_url',
+                image_url: {
+                  url: `data:${img.mimeType};base64,${img.base64}`
+                }
+              }))
+            ]
+          };
         })
-      }))],
-
+      ],
       stream: true
     })
   }),
+
 
   handleStreamData: (line, onData) => {
     if (line.startsWith('data: ')) {
