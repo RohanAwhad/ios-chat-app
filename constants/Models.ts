@@ -24,7 +24,8 @@ export const MODELS = {
 
     name: 'gpt-4o-mini',
     baseURL: 'https://api.openai.com/v1',
-    apiKeyName: 'openai-api-key'
+    apiKeyName: 'openai-api-key',
+    tools: [BRAVE_SEARCH_TOOL]
   },
   GPT_4O: {
     name: 'gpt-4o',
@@ -46,7 +47,8 @@ export const MODELS = {
   CLAUDE_HAIKU: {
     name: 'claude-3-5-haiku-latest',
     baseURL: 'https://api.anthropic.com/v1',
-    apiKeyName: 'anthropic-api-key'
+    apiKeyName: 'anthropic-api-key',
+    tools: [BRAVE_SEARCH_TOOL]
   },
   CLAUDE_SONNET: {
     name: 'claude-3-7-sonnet-20250219',
