@@ -19,7 +19,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     const loadApiKeys = async () => {
-      const [openai, gemini, anthropic, deepseek] = await Promise.all([
+      const [openai, gemini, anthropic, deepseek, brave] = await Promise.all([
         AsyncStorage.getItem('openai-api-key'),
         AsyncStorage.getItem('gemini-api-key'),
         AsyncStorage.getItem('anthropic-api-key'),
@@ -54,205 +54,205 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView style={{ flex: 1 }}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.container}
         automaticallyAdjustKeyboardInsets={true}
         keyboardDismissMode="interactive"
       >
 
 
-      <ThemedText type="title" style={styles.title}>API Settings</ThemedText>
-      
-      {/* OpenAI API Key */}
-      <ThemedText type="defaultSemiBold" style={styles.label}>
-        OpenAI API Key:
-      </ThemedText>
-      <TextInput
-        style={[
-          styles.input,
-          {
-            color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-            backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-            borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
-          }
-        ]}
-        value={openaiApiKey}
-        onChangeText={setOpenaiApiKey}
-        placeholder="Enter your OpenAI API key"
-        placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-        secureTextEntry
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-          { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-        ]}
-        onPress={() => handleSave('openai-api-key', openaiApiKey)}
-      >
-        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save OpenAI Key</ThemedText>
-        <IconSymbol
-          name="paperplane.fill"
-          size={20}
-          color="white"
-          style={styles.buttonIcon}
+        <ThemedText type="title" style={styles.title}>API Settings</ThemedText>
+
+        {/* OpenAI API Key */}
+        <ThemedText type="defaultSemiBold" style={styles.label}>
+          OpenAI API Key:
+        </ThemedText>
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+              backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+              borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
+            }
+          ]}
+          value={openaiApiKey}
+          onChangeText={setOpenaiApiKey}
+          placeholder="Enter your OpenAI API key"
+          placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
         />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+          ]}
+          onPress={() => handleSave('openai-api-key', openaiApiKey)}
+        >
+          <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save OpenAI Key</ThemedText>
+          <IconSymbol
+            name="paperplane.fill"
+            size={20}
+            color="white"
+            style={styles.buttonIcon}
+          />
+        </TouchableOpacity>
 
-      {/* Gemini API Key */}
-      <ThemedText type="defaultSemiBold" style={styles.label}>
-        Gemini API Key:
-      </ThemedText>
-      <TextInput
-        style={[
-          styles.input,
-          {
-            color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-            backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-            borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
-          }
-        ]}
-        value={geminiApiKey}
-        onChangeText={setGeminiApiKey}
-        placeholder="Enter your Gemini API key"
-        placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-        secureTextEntry
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-          { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-        ]}
-        onPress={() => handleSave('gemini-api-key', geminiApiKey)}
-      >
-        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Gemini Key</ThemedText>
-        <IconSymbol
-          name="paperplane.fill"
-          size={20}
-          color="white"
-          style={styles.buttonIcon}
+        {/* Gemini API Key */}
+        <ThemedText type="defaultSemiBold" style={styles.label}>
+          Gemini API Key:
+        </ThemedText>
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+              backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+              borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
+            }
+          ]}
+          value={geminiApiKey}
+          onChangeText={setGeminiApiKey}
+          placeholder="Enter your Gemini API key"
+          placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
         />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+          ]}
+          onPress={() => handleSave('gemini-api-key', geminiApiKey)}
+        >
+          <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Gemini Key</ThemedText>
+          <IconSymbol
+            name="paperplane.fill"
+            size={20}
+            color="white"
+            style={styles.buttonIcon}
+          />
+        </TouchableOpacity>
 
-      {/* Anthropic API Key */}
-      <ThemedText type="defaultSemiBold" style={styles.label}>
-        Anthropic API Key:
-      </ThemedText>
-      <TextInput
-        style={[
-          styles.input,
-          {
-            color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-            backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-            borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
-          }
-        ]}
-        value={anthropicApiKey}
-        onChangeText={setAnthropicApiKey}
-        placeholder="Enter your Anthropic API key"
-        placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-        secureTextEntry
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-          { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-        ]}
-        onPress={() => handleSave('anthropic-api-key', anthropicApiKey)}
-      >
-        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Anthropic Key</ThemedText>
-        <IconSymbol
-          name="paperplane.fill"
-          size={20}
-          color="white"
-          style={styles.buttonIcon}
+        {/* Anthropic API Key */}
+        <ThemedText type="defaultSemiBold" style={styles.label}>
+          Anthropic API Key:
+        </ThemedText>
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+              backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+              borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
+            }
+          ]}
+          value={anthropicApiKey}
+          onChangeText={setAnthropicApiKey}
+          placeholder="Enter your Anthropic API key"
+          placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
         />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+          ]}
+          onPress={() => handleSave('anthropic-api-key', anthropicApiKey)}
+        >
+          <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Anthropic Key</ThemedText>
+          <IconSymbol
+            name="paperplane.fill"
+            size={20}
+            color="white"
+            style={styles.buttonIcon}
+          />
+        </TouchableOpacity>
 
-      {/* DeepSeek API Key */}
-      <ThemedText type="defaultSemiBold" style={styles.label}>
-        DeepSeek API Key:
-      </ThemedText>
-      <TextInput
-        style={[
-          styles.input,
-          {
-            color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-            backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-            borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
-          }
-        ]}
-        value={deepseekApiKey}
-        onChangeText={setDeepseekApiKey}
-        placeholder="Enter your DeepSeek API key"
-        placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-        secureTextEntry
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-          { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-        ]}
-        onPress={() => handleSave('deepseek-api-key', deepseekApiKey)}
-      >
-        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save DeepSeek Key</ThemedText>
-        <IconSymbol
-          name="paperplane.fill"
-          size={20}
-          color="white"
-          style={styles.buttonIcon}
+        {/* DeepSeek API Key */}
+        <ThemedText type="defaultSemiBold" style={styles.label}>
+          DeepSeek API Key:
+        </ThemedText>
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+              backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+              borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
+            }
+          ]}
+          value={deepseekApiKey}
+          onChangeText={setDeepseekApiKey}
+          placeholder="Enter your DeepSeek API key"
+          placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
         />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+          ]}
+          onPress={() => handleSave('deepseek-api-key', deepseekApiKey)}
+        >
+          <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save DeepSeek Key</ThemedText>
+          <IconSymbol
+            name="paperplane.fill"
+            size={20}
+            color="white"
+            style={styles.buttonIcon}
+          />
+        </TouchableOpacity>
 
-      {/* Brave Search API Key */}
-      <ThemedText type="defaultSemiBold" style={styles.label}>
-        Brave Search API Key:
-      </ThemedText>
-      <TextInput
-        style={[
-          styles.input,
-          {
-            color: theme === 'light' ? Colors.light.text : Colors.dark.text,
-            backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
-            borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
-          }
-        ]}
-        value={braveApiKey}
-        onChangeText={setBraveApiKey}
-        placeholder="Enter your Brave Search API key"
-        placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-        secureTextEntry
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity
-        style={[
-          styles.saveButton,
-          { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
-        ]}
-        onPress={() => handleSave('brave-api-key', braveApiKey)}
-      >
-        <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Brave Key</ThemedText>
-        <IconSymbol
-          name="paperplane.fill"
-          size={20}
-          color="white"
-          style={styles.buttonIcon}
+        {/* Brave Search API Key */}
+        <ThemedText type="defaultSemiBold" style={styles.label}>
+          Brave Search API Key:
+        </ThemedText>
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: theme === 'light' ? Colors.light.text : Colors.dark.text,
+              backgroundColor: theme === 'light' ? Colors.light.background : Colors.dark.background,
+              borderColor: theme === 'light' ? Colors.light.icon : Colors.dark.icon
+            }
+          ]}
+          value={braveApiKey}
+          onChangeText={setBraveApiKey}
+          placeholder="Enter your Brave Search API key"
+          placeholderTextColor={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
         />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            { backgroundColor: theme === 'light' ? Colors.light.tint : Colors.dark.tint }
+          ]}
+          onPress={() => handleSave('brave-api-key', braveApiKey)}
+        >
+          <ThemedText style={[styles.buttonText, { color: theme === 'light' ? Colors.dark.text : Colors.light.text }]}>Save Brave Key</ThemedText>
+          <IconSymbol
+            name="paperplane.fill"
+            size={20}
+            color="white"
+            style={styles.buttonIcon}
+          />
+        </TouchableOpacity>
 
-      <ThemedText type="subtitle" style={styles.note}>
-        Your API keys are stored securely on your device and never sent anywhere except directly to their respective APIs (OpenAI, Gemini, Anthropic, DeepSeek, Brave).
+        <ThemedText type="subtitle" style={styles.note}>
+          Your API keys are stored securely on your device and never sent anywhere except directly to their respective APIs (OpenAI, Gemini, Anthropic, DeepSeek, Brave).
 
 
-      </ThemedText>
+        </ThemedText>
       </ScrollView>
     </ThemedView>
 
