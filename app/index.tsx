@@ -355,17 +355,17 @@ export default function ChatScreen() {
               </ThemedText>
               {message.images && message.images.length > 0 && (
                 <View style={styles.messageImagesContainer}>
-                  {message.images.slice(0, 3).map((img, index) => (
+                  {message.images.slice(0, 2).map((img, index) => (
                     <Image
                       key={`${img.uri}-${index}`}
                       source={{ uri: img.uri }}
                       style={styles.messageImage}
                     />
                   ))}
-                  {message.images.length > 3 && (
+                  {message.images.length > 2 && (
                     <View style={styles.moreImagesIndicator}>
                       <ThemedText style={styles.moreImagesText}>
-                        +{message.images.length - 3}
+                        +{message.images.length - 2}
                       </ThemedText>
                     </View>
                   )}
