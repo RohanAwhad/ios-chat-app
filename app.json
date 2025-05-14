@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.rohanawhad.mychatapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "deploymentTarget": "17.0"
     },
     "android": {
       "adaptiveIcon": {
