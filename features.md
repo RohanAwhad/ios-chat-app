@@ -7,7 +7,7 @@
 - [ ] 005_Edit any message
 - [ ] 006_Delete any message
 - [ ] 007_View Sent Images
-- [ ] 008_Perform Web Search
+- [x] 008_Perform Web Search
 - [ ] 009_Upload PDFs
 - [ ] 010_Voice Mode
 - [ ] 011_Splash Screen that says "I love you Mom & Dad <3"
