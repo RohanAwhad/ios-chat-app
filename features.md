@@ -11,6 +11,7 @@
 - [ ] 009_Upload PDFs
 - [ ] 010_Voice Mode
 - [ ] 011_Splash Screen that says "I love you Mom & Dad <3"
+- [ ] 012_Remove Expo dependency
 
 This is basically list of high level feature prompts that i am using to guide ai to add new features. I plan on getting better and I am recording here, so i can come back and study this.
 
